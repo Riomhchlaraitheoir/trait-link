@@ -1,7 +1,8 @@
 use convert_case::ccase;
 use proc_macro2::Ident;
-use quote::{format_ident};
-use syn::{parse_quote, Field, FieldMutability, Fields, FieldsUnnamed, ItemEnum, Variant, Visibility};
+use quote::{format_ident, ToTokens};
+use syn::{parse_quote, Field, FieldMutability, Fields, FieldsUnnamed, ItemEnum, LitStr, Variant, Visibility};
+use syn::spanned::Spanned;
 use crate::{Link, Method};
 use crate::output::Names;
 
@@ -12,10 +13,12 @@ impl Link {
 
     pub fn response_enum(&self, names: &Names) -> ItemEnum {
         let serde = names.serde();
+        let serde_str = LitStr::new(&serde.to_token_stream().to_string(), serde.span());
         let name = self.response_name();
         let variants = self.methods.iter().map(Method::response_variant);
         parse_quote!(
             #[derive(Debug, #serde::Serialize, #serde::Deserialize)]
+            #[serde(crate = #serde_str)]
             enum #name {
                 #(#variants),*
             }
