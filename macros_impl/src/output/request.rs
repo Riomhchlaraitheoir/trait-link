@@ -1,10 +1,9 @@
+use crate::output::Names;
+use crate::{Link, Method};
 use convert_case::ccase;
 use proc_macro2::Ident;
-use quote::{format_ident, ToTokens};
-use syn::{parse_quote, Field, FieldMutability, Fields, FieldsUnnamed, ItemEnum, LitStr, Variant, Visibility};
-use syn::spanned::Spanned;
-use crate::{Link, Method};
-use crate::output::Names;
+use quote::format_ident;
+use syn::{parse_quote, Field, FieldMutability, Fields, FieldsUnnamed, ItemEnum, Variant, Visibility};
 
 impl Link {
     pub fn request_name(&self) -> Ident {
@@ -13,13 +12,19 @@ impl Link {
 
     pub fn request_enum(&self, names: &Names) -> ItemEnum {
         let serde = names.serde();
-        let serde_str = LitStr::new(&serde.to_token_stream().to_string(), serde.span());
+        let serde_str = serde.segments
+            .iter()
+            .map(|s| {
+                format!("::{}", s.ident)
+            })
+            .collect::<String>();
         let name = self.request_name();
         let variants = self.methods.iter().map(Method::request_variant);
+        let vis = &self.vis;
         parse_quote!(
             #[derive(Debug, #serde::Serialize, #serde::Deserialize)]
             #[serde(crate = #serde_str)]
-            enum #name {
+            #vis enum #name {
                 #(#variants),*
             }
         )

@@ -1,4 +1,4 @@
-trait TodoServer {
+pub trait TodoServer {
     type Error: ::core::error::Error;
     async fn get_todos(&self) -> Result<Vec<Todo>, ::trait_link::LinkError<Self::Error>>;
     async fn get_todo(&self, name: String) -> Result<Option<Todo>, ::trait_link::LinkError<Self::Error>>;
@@ -7,7 +7,7 @@ trait TodoServer {
 
 #[derive(Debug, ::trait_link::serde::Serialize, ::trait_link::serde::Deserialize)]
 #[serde(crate = "::trait_link::serde")]
-enum TodoServerRequest {
+pub enum TodoServerRequest {
     GetTodos(),
     GetTodo(String),
     NewTodo(Todo),
@@ -15,16 +15,16 @@ enum TodoServerRequest {
 
 #[derive(Debug, ::trait_link::serde::Serialize, ::trait_link::serde::Deserialize)]
 #[serde(crate = "::trait_link::serde")]
-enum TodoServerResponse {
+pub enum TodoServerResponse {
     GetTodos(Vec<Todo>),
     GetTodo(Option<Todo>),
     NewTodo(()),
 }
 
-struct TodoServerClient<T: ::trait_link::Transport>(T);
+pub struct TodoServerClient<T: ::trait_link::Transport>(T);
 
 impl<T: ::trait_link::Transport> TodoServerClient<T> {
-    fn new(transport: T) -> Self {
+    pub fn new(transport: T) -> Self {
         Self(transport)
     }
 }

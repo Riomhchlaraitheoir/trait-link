@@ -13,6 +13,7 @@ impl Link {
     pub fn server(&self, names: &Names) -> Vec<Item> {
         vec![
             Item::Struct(self.server_struct()),
+            Item::Impl(self.server_new()),
             Item::Impl(self.server_impl(names))
         ]
     }
@@ -41,6 +42,19 @@ impl Link {
                 ].into_iter().collect(),
             }),
             semi_token: None,
+        }
+    }
+
+    fn server_new(&self) -> ItemImpl {
+        let rpc = &self.name;
+        let server = self.server_name();
+        let vis = &self.vis;
+        parse_quote! {
+            impl<T: #rpc> #server<T> {
+                #vis fn new(server: T) -> Self {
+                    Self(server)
+                }
+            }
         }
     }
 

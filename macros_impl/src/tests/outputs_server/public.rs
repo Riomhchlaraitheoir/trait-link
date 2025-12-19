@@ -1,5 +1,5 @@
 
-trait TodoServer {
+pub trait TodoServer {
     type Error: ::core::error::Error;
     fn get_todos(&self) -> impl ::core::future::Future<Output = Vec<Todo>> + Send;
     fn get_todo(&self, name: String) -> impl ::core::future::Future<Output = Option<Todo>> + Send;
@@ -8,7 +8,7 @@ trait TodoServer {
 
 #[derive(Debug, ::trait_link::serde::Serialize, ::trait_link::serde::Deserialize)]
 #[serde(crate = "::trait_link::serde")]
-enum TodoServerRequest {
+pub enum TodoServerRequest {
     GetTodos(),
     GetTodo(String),
     NewTodo(Todo),
@@ -16,16 +16,16 @@ enum TodoServerRequest {
 
 #[derive(Debug, ::trait_link::serde::Serialize, ::trait_link::serde::Deserialize)]
 #[serde(crate = "::trait_link::serde")]
-enum TodoServerResponse {
+pub enum TodoServerResponse {
     GetTodos(Vec<Todo>),
     GetTodo(Option<Todo>),
     NewTodo(())
 }
 
-struct TodoServerRpcServer<T: TodoServer>(T);
+pub struct TodoServerRpcServer<T: TodoServer>(T);
 
 impl<T: TodoServer> TodoServerRpcServer<T> {
-    fn new(server: T) -> Self {
+    pub fn new(server: T) -> Self {
         Self(server)
     }
 }

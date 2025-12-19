@@ -35,4 +35,4 @@ fn test_case(input: &'static str, expected: &'static str) {
     difference::assert_diff!(&actual, &expected, "\n", 0);
 }
 
-tests!(simple);
+tests!(simple, public);

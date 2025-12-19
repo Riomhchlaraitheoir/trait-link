@@ -63,8 +63,7 @@ impl Method {
         let pats: Vec<Pat> = self.args.iter().map(|arg| (*arg.pat).clone()).collect();
         let params = self.args.iter();
         let ret = &self.ret;
-        let transport = names.transport();
-        let link_error = names.link_error(parse_quote!(T::Error));
+        let link_error = names.link_error(parse_quote!(Self::Error));
         parse_quote! {
             async fn #name(&self, #(#params),*) -> Result<#ret, #link_error> {
                 if let #response::#variant(value) = self.0.send(#request::#variant(#(#pats),*)).await? {
