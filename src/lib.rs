@@ -25,7 +25,7 @@ pub trait Rpc: Sync {
     fn process(&self, request: Self::Request) -> impl Future<Output = Self::Response> + Send;
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum LinkError<T: Error> {
     #[error("Failed to send request: {0}")]
     Transport(#[from] T),
