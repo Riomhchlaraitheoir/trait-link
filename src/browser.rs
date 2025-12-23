@@ -3,14 +3,14 @@
 //! This provides a transport implementation which uses the Browser's Fetch API to send http
 //! requests and parse the response body as JSON
 
-use serde::de::DeserializeOwned;
+use crate::{LinkError, Transport};
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use thiserror::Error;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_futures::wasm_bindgen::JsCast;
-use web_sys::{Request, RequestInit, RequestMode, Response, Window};
 use web_sys::wasm_bindgen::JsValue;
-use crate::Transport;
+use web_sys::{Request, RequestInit, RequestMode, Response, Window};
 
 pub struct Client {
     url: String,
@@ -32,20 +32,47 @@ impl Client {
     }
 }
 
-impl Transport for Client {
+impl<Req, Resp> Transport<Req, Resp> for Client
+where
+    Req: Serialize,
+    Resp: DeserializeOwned,
+{
     type Error = Error;
 
-    async fn send<Req, Resp>(&self, request: Req) -> Result<Resp, <Self as Transport>::Error>
+    async fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>> {
+        #[allow(clippy::needless_borrow, reason = "borrow is need to prevent recursion")]
+        Ok((&self).send(request).await?)
+    }
+}
+
+impl<Req, Resp> Transport<Req, Resp> for &Client
+where
+    Req: Serialize,
+    Resp: DeserializeOwned,
+{
+    type Error = Error;
+
+    async fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>> {
+        Ok(self.send(request).await?)
+    }
+}
+
+impl Client {
+    async fn send<Req, Resp>(&self, request: Req) -> Result<Resp, Error>
     where
         Req: Serialize,
-        Resp: DeserializeOwned
+        Resp: DeserializeOwned,
     {
         let body = serde_json::to_string(&request).map_err(Error::Serialise)?;
         let opts = self.request_options.clone();
         opts.set_body(&JsValue::from_str(&body));
 
-        let request = Request::new_with_str_and_init(&self.url, &opts).map_err(Error::NewRequest)?;
-        request.headers().set("Content-Type", "application/json").map_err(Error::SetHeader)?;
+        let request =
+            Request::new_with_str_and_init(&self.url, &opts).map_err(Error::NewRequest)?;
+        request
+            .headers()
+            .set("Content-Type", "application/json")
+            .map_err(Error::SetHeader)?;
 
         let promise = self.window.fetch_with_request(&request);
         let future = JsFuture::from(promise);

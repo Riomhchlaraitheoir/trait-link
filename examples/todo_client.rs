@@ -1,14 +1,12 @@
 use trait_link::reqwest::Client;
 use trait_link::*;
-use trait_link::serde::{Serialize, Deserialize};
-use crate::todo_lib::Todo;
 
-mod todo_lib;
-use todo_lib::*;
+include!("traits/todo.rs");
 
 #[tokio::main]
 async fn main() {
-    let client = TodoServerClient::new(Client::new("http://localhost:8080/api/todo"));
+    let client = Client::new("http://localhost:8080/api/todo");
+    let client = TodoService::client(&client);
     for todo in client.get_todos().await.expect("get_todos failed") {
         println!("{todo:?}")
     }
@@ -16,9 +14,7 @@ async fn main() {
         println!("{todo:?}")
     }
     client.new_todo(Todo {
-        title: "".to_string(),
-        description: "".to_string(),
-        done: false,
-        deadline: Default::default(),
+        name: "Some task".to_string(),
+        description: "A description of the task".to_string(),
     }).await.expect("new_todo failed");
 }

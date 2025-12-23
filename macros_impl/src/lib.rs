@@ -1,7 +1,7 @@
+use crate::parse::Parser;
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{Generics, ItemTrait, PatType, Token, Type, TypeParamBound, Visibility};
-use syn::punctuated::Punctuated;
+use syn::{Generics, ItemTrait, PatType, Path, Type, Visibility};
 
 #[cfg(test)]
 mod tests;
@@ -9,22 +9,26 @@ mod parse;
 
 mod output;
 
-pub fn link(_args: TokenStream, input: ItemTrait) -> syn::Result<impl ToTokens> {
-    Link::try_from(input)
+pub fn rpc(_args: TokenStream, input: ItemTrait) -> syn::Result<impl ToTokens> {
+    let parser = Parser;
+    parser.rpc(input)
 }
 
-struct Link {
+struct Rpc {
     vis: Visibility,
     generics: Generics,
     name: Ident,
-    colon_token: Option<Token![:]>,
-    supertraits: Punctuated<TypeParamBound, Token![+]>,
-    methods: Vec<Method>
+    methods: Vec<Method>,
 }
 
 struct Method {
     name: Ident,
-    generics: Generics,
     args: Vec<PatType>,
-    ret: Type
+    ret: ReturnType,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ReturnType {
+    Simple(Type),
+    Nested { service: Path }
 }

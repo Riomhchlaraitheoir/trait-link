@@ -1,8 +1,8 @@
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
+use crate::{LinkError, Transport};
 pub use reqwest::Error;
-use crate::Transport;
 
 pub struct Client {
     client: reqwest::Client,
@@ -18,14 +18,33 @@ impl Client {
     }
 }
 
-impl Transport for Client {
+impl<Req, Resp> Transport<Req, Resp> for Client
+where
+    Req: Serialize,
+    Resp: DeserializeOwned,
+{
     type Error = Error;
 
-    async fn send<Req, Resp>(&self, request: Req) -> Result<Resp, <Self as Transport>::Error>
-    where
-        Req: Serialize,
-        Resp: DeserializeOwned
-    {
-        self.client.post(&self.url).json(&request).send().await?.json().await
+    async fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>> {
+        (&self).send(request).await
+    }
+}
+
+impl<Req, Resp> Transport<Req, Resp> for &Client
+where
+    Req: Serialize,
+    Resp: DeserializeOwned,
+{
+    type Error = Error;
+
+    async fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>> {
+        Ok(self
+            .client
+            .post(&self.url)
+            .json(&request)
+            .send()
+            .await?
+            .json()
+            .await?)
     }
 }
