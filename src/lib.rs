@@ -6,19 +6,22 @@ use std::error::Error;
 use thiserror::Error;
 
 /// Contains modules for individual server implementations
-pub mod server{
+pub mod server {
     /// Helpers for serving a service from an axum server
     #[cfg(feature = "axum")]
     pub mod axum;
 }
 /// Contains modules for individual client implementations
 pub mod client {
-    /// Implementation for making requests using the reqwest crate
-    #[cfg(feature = "reqwest")]
-    pub mod reqwest;
     /// Implementation for making requests from browser wasm using the Fetch API
     #[cfg(all(feature = "browser", target_arch = "wasm32"))]
     pub mod browser;
+    /// Implementation for making requests using the reqwest crate
+    #[cfg(feature = "reqwest")]
+    pub mod reqwest;
+    /// Implementation for making requests using the reqwest crate
+    #[cfg(feature = "reqwest-blocking")]
+    pub mod reqwest_blocking;
     #[cfg(all(feature = "browser", not(target_arch = "wasm32")))]
     compile_error!("browser feature is only available for wasm32 target arch");
 }
@@ -38,7 +41,7 @@ pub use macros::rpc;
 /// request/response types
 ///
 /// Naturally a format and protocol the is supported by the server should be chosen
-pub trait Transport<Req, Resp> {
+pub trait AsyncTransport<Req, Resp> {
     /// This is the error type which is returned in the case that some part of the transport failed
     type Error: std::error::Error;
 
@@ -46,16 +49,48 @@ pub trait Transport<Req, Resp> {
     fn send(self, request: Req) -> impl Future<Output = Result<Resp, LinkError<Self::Error>>>;
 }
 
+/// This trait describes the transport layer of a client,
+///
+/// It is responsible for:
+///   * serialising the request
+///   * sending the request
+///   * waiting for a response
+///   * deserialising the response
+///
+/// This is not tied to any particular form of serialisation or communication, nor is it tied to
+/// any crate like serde, an individual transport layer may choose what limitations to place on the
+/// request/response types
+///
+/// Naturally a format and protocol the is supported by the server should be chosen
+pub trait BlockingTransport<Req, Resp> {
+    /// This is the error type which is returned in the case that some part of the transport failed
+    type Error: std::error::Error;
+
+    /// Sends the request and returns the response
+    fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>>;
+}
+
 /// This is a trait for the main entry point of the RPC, it describes the types for client,
 /// request and response
-// todo: add client and server functions to this trait, rather than defined on the type itself
-pub trait Rpc: Sync {
-    /// This is the client type used for accessing the RPC service
-    type Client<T: Transport<Self::Request, Self::Response>>;
+pub trait Rpc: Sync + Sized {
+    /// This is the async client type used for accessing the RPC service
+    type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>>;
+    /// This is the blocking client type used for accessing the RPC service
+    type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>>;
     /// This is the request type accepted by the service
     type Request: Send;
     /// This is the response type returned by the service
     type Response: Send;
+    /// Create a new asynchronous client, using the given underlying transport, if you wish to re-use the
+    /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
+    fn async_client<_Transport>(transport: _Transport) -> Self::AsyncClient<_Transport>
+    where
+        _Transport: AsyncTransport<Self::Request, Self::Response>;
+    /// Create a new blocking client, using the given underlying transport, if you wish to re-use the
+    /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
+    fn blocking_client<_Transport>(transport: _Transport) -> Self::BlockingClient<_Transport>
+    where
+        _Transport: BlockingTransport<Self::Request, Self::Response>;
 }
 
 /// This trait describes a handler which takes a request and calls the appropriate method of
@@ -66,7 +101,10 @@ pub trait Handler {
     /// This is the service that this handler supports
     type Service: Rpc;
     /// takes the request and returns a response, see [trait documentation](Self) for details
-    fn handle(self, request: <Self::Service as Rpc>::Request) -> impl Future<Output = <Self::Service as Rpc>::Response> + Send;
+    fn handle(
+        self,
+        request: <Self::Service as Rpc>::Request,
+    ) -> impl Future<Output = <Self::Service as Rpc>::Response> + Send;
 }
 
 /// This is a error that the client may return after a request
@@ -74,12 +112,14 @@ pub trait Handler {
 pub enum LinkError<T: Error> {
     /// The transport layer returned an error
     #[error("Failed to send request: {0}")]
-    Transport(#[from] T),
+    AsyncTransport(#[from] T),
     /// Response was the wrong type, sent a request for one function, but received the response of a different one
     ///
     /// This is not an expected case and is simply included as an alternative to panicking in this case
     /// This error either means the server side is misbehaving quite badly, or the transport is not configured to the correct endpoint
-    #[error("Response was the wrong type, sent a request for one function, but received the response of a different one")]
+    #[error(
+        "Response was the wrong type, sent a request for one function, but received the response of a different one"
+    )]
     WrongResponseType,
 }
 
@@ -89,14 +129,17 @@ pub struct MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> {
     outer: T,
     args: Args,
     to_inner: fn(OuterResp) -> Option<InnerResp>,
-    to_outer: fn(Args, InnerReq) -> OuterReq
+    to_outer: fn(Args, InnerReq) -> OuterReq,
 }
 
-impl<T: Copy, InnerReq, OuterReq, InnerResp, OuterResp, Args: Copy> Copy for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> {
-
+impl<T: Copy, InnerReq, OuterReq, InnerResp, OuterResp, Args: Copy> Copy
+    for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+{
 }
 
-impl<T: Clone, InnerReq, OuterReq, InnerResp, OuterResp, Args: Clone> Clone for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> {
+impl<T: Clone, InnerReq, OuterReq, InnerResp, OuterResp, Args: Clone> Clone
+    for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+{
     fn clone(&self) -> Self {
         Self {
             outer: self.outer.clone(),
@@ -107,9 +150,16 @@ impl<T: Clone, InnerReq, OuterReq, InnerResp, OuterResp, Args: Clone> Clone for 
     }
 }
 
-impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> {
+impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+    MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+{
     /// Create a new MappedTransport
-    pub fn new(inner: T, args: Args, to_inner: fn(OuterResp) -> Option<InnerResp>, to_outer: fn(Args, InnerReq) -> OuterReq) -> Self {
+    pub fn new(
+        inner: T,
+        args: Args,
+        to_inner: fn(OuterResp) -> Option<InnerResp>,
+        to_outer: fn(Args, InnerReq) -> OuterReq,
+    ) -> Self {
         Self {
             outer: inner,
             args,
@@ -118,14 +168,31 @@ impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> MappedTransport<T, Inner
         }
     }
 }
-impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> Transport<InnerReq, InnerResp> for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> AsyncTransport<InnerReq, InnerResp>
+    for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
 where
     Args: Clone,
-    T: Transport<OuterReq, OuterResp> {
+    T: AsyncTransport<OuterReq, OuterResp>,
+{
     type Error = T::Error;
     async fn send(self, request: InnerReq) -> Result<InnerResp, LinkError<T::Error>> {
         let request = (self.to_outer)(self.args.clone(), request);
         let response = self.outer.send(request).await?;
+        let response = (self.to_inner)(response).ok_or(LinkError::WrongResponseType)?;
+        Ok(response)
+    }
+}
+
+impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args> BlockingTransport<InnerReq, InnerResp>
+    for MappedTransport<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
+where
+    Args: Clone,
+    T: BlockingTransport<OuterReq, OuterResp>,
+{
+    type Error = T::Error;
+    fn send(self, request: InnerReq) -> Result<InnerResp, LinkError<T::Error>> {
+        let request = (self.to_outer)(self.args.clone(), request);
+        let response = self.outer.send(request)?;
         let response = (self.to_inner)(response).ok_or(LinkError::WrongResponseType)?;
         Ok(response)
     }

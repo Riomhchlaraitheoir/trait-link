@@ -4,7 +4,7 @@
 //! requests and parse the response body as JSON
 
 use bon::bon;
-use crate::{LinkError, Transport};
+use crate::{LinkError, AsyncTransport};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use thiserror::Error;
@@ -15,14 +15,14 @@ use web_sys::{Request, RequestInit, RequestMode, Response, Window};
 
 /// A client which uses the browsers Fetch API along with JSON format (via serde),
 /// only supported on wasm32 architecture
-pub struct Client {
+pub struct AsyncClient {
     url: String,
     window: Window,
     request_options: RequestInit,
 }
 
 #[bon]
-impl Client {
+impl AsyncClient {
     /// Create a new client
     #[builder]
     pub fn new(
@@ -49,7 +49,7 @@ impl Client {
     }
 }
 
-impl<Req, Resp> Transport<Req, Resp> for Client
+impl<Req, Resp> AsyncTransport<Req, Resp> for AsyncClient
 where
     Req: Serialize,
     Resp: DeserializeOwned,
@@ -62,7 +62,7 @@ where
     }
 }
 
-impl<Req, Resp> Transport<Req, Resp> for &Client
+impl<Req, Resp> AsyncTransport<Req, Resp> for &AsyncClient
 where
     Req: Serialize,
     Resp: DeserializeOwned,
@@ -74,7 +74,7 @@ where
     }
 }
 
-impl Client {
+impl AsyncClient {
     async fn send<Req, Resp>(&self, request: Req) -> Result<Resp, Error>
     where
         Req: Serialize,

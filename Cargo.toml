@@ -14,6 +14,7 @@ edition.workspace = true
 [features]
 axum = ["dep:axum", "tower"]
 browser = ["web-sys", "wasm-bindgen-futures", "serde-wasm-bindgen"]
+reqwest-blocking = ["reqwest", "reqwest/blocking"]
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
@@ -42,6 +43,10 @@ tokio = { version = "1.48.0", features = ["full"] }
 [[example]]
 name = "todo_client"
 required-features = ["reqwest"]
+
+[[example]]
+name = "blocking_client"
+required-features = ["reqwest-blocking"]
 
 [[example]]
 name = "nested_client"

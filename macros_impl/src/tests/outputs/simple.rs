@@ -1,35 +1,37 @@
 pub use todo_service::{
-    Client as TodoServiceClient, Server as TodoServiceServer, Service as TodoService,
+    AsyncClient as TodoServiceAsyncClient,
+    BlockingClient as TodoServiceBlockingClient,
+    Server as TodoServiceServer,
+    Service as TodoService,
 };
 
 mod todo_service {
     use super::*;
     use ::trait_link::{
-        LinkError, MappedTransport, Rpc, Transport,
+        AsyncTransport, BlockingTransport, LinkError, MappedTransport, Rpc,
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
 
     /// A service for managing to-do items
-    /// 
+    ///
     /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
 
     impl Rpc for Service {
-        type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
+        type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>> = AsyncClient<T>;
+type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>> = BlockingClient<T>;
         type Request = Request;
         type Response = Response;
+        fn async_client<_Transport: AsyncTransport<Request, Response>>(transport: _Transport) -> AsyncClient<_Transport> {
+            AsyncClient(transport)
+        }
+        fn blocking_client<_Transport: BlockingTransport<Request, Response>>(transport: _Transport) -> BlockingClient<_Transport> {
+            BlockingClient(transport)
+        }
     }
 
     impl Service {
-        /// Create a new client, using the given underlying transport, if you wish to re-use the
-        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
-        pub fn client<_Transport: Transport<Request, Response>>(
-            transport: _Transport,
-        ) -> Client<_Transport> {
-            Client(transport)
-        }
-
         /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
@@ -90,15 +92,15 @@ mod todo_service {
 
     /// A service for managing to-do items
     ///
-    /// This is the client for the service, it produces requests from method calls
+    /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::Transport) before returning the response
+    /// [transport](::trait_link::AsyncTransport) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
-    pub struct Client<_Transport>(_Transport);
+    pub struct AsyncClient<_Transport>(_Transport);
 
-    impl<_Transport: Transport<Request, Response>> Client<_Transport> {
+    impl<_Transport: AsyncTransport<Request, Response>> AsyncClient<_Transport> {
         /// Get a list of to-do items
         pub async fn get_todos(self) -> Result<Vec<Todo>, LinkError<_Transport::Error>> {
             if let Response::GetTodos(value) = self.0.send(Request::GetTodos()).await? {
@@ -121,6 +123,43 @@ mod todo_service {
         /// Create a new to-do item
         pub async fn new_todo(self, todo: Todo) -> Result<(), LinkError<_Transport::Error>> {
             if let Response::NewTodo(value) = self.0.send(Request::NewTodo(todo)).await? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+    }
+
+    /// A service for managing to-do items
+    ///
+    /// This is the blocking client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::AsyncTransport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
+    #[derive(Debug, Copy, Clone)]
+    pub struct BlockingClient<_Transport>(_Transport);
+
+    impl<_Transport: BlockingTransport<Request, Response>> BlockingClient<_Transport> {
+        /// Get a list of to-do items
+        pub fn get_todos(self) -> Result<Vec<Todo>, LinkError<_Transport::Error>> {
+            if let Response::GetTodos(value) = self.0.send(Request::GetTodos())? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        /// Get a to-do item by name, returns None if no to-do item with the given name exists
+        pub fn get_todo(self, name: String) -> Result<Option<Todo>, LinkError<_Transport::Error>> {
+            if let Response::GetTodo(value) = self.0.send(Request::GetTodo(name))? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        /// Create a new to-do item
+        pub fn new_todo(self, todo: Todo) -> Result<(), LinkError<_Transport::Error>> {
+            if let Response::NewTodo(value) = self.0.send(Request::NewTodo(todo))? {
                 Ok(value)
             } else {
                 Err(LinkError::WrongResponseType)

@@ -32,9 +32,15 @@ impl ToTokens for Rpc {
         let imports = {
             let vis = &self.vis;
             let server = format_ident!("{}Server", service);
-            let client = format_ident!("{}Client", service);
+            let async_client = format_ident!("{}AsyncClient", service);
+            let blocking_client = format_ident!("{}BlockingClient", service);
             quote!(
-                #vis use #module::{Client as #client, Server as #server, Service as #service};
+                #vis use #module::{
+                    AsyncClient as #async_client,
+                    BlockingClient as #blocking_client,
+                    Server as #server,
+                    Service as #service
+                };
             )
         };
 
@@ -127,57 +133,8 @@ impl ToTokens for Rpc {
             }
         });
 
-        let client_fns = self.methods.iter().map(|method| {
-            let name = &method.name;
-            let params = &method.args;
-            let args = method.args.iter().map(|pat| &pat.pat);
-            let variant = ident_ccase!(pascal, name);
-            let docs = &method.docs;
-            let docs = quote! {
-                #(#[doc = #docs])*
-            };
-            match &method.ret {
-                ReturnType::Simple(ret) => {
-                    quote! {
-                        #docs
-                        pub async fn #name(self #(, #params)*) -> Result<#ret, LinkError<_Transport::Error>> {
-                            if let Response::#variant(value) = self.0
-                                    .send(Request::#variant(#(#args),*))
-                                    .await? {
-                                Ok(value)
-                            } else {
-                                Err(LinkError::WrongResponseType)
-                            }
-                        }
-                    }
-                }
-                ReturnType::Nested { service: nested } => { // TODO account for sub-service error
-                    let to_inner = format_ident!("{name}_to_inner");
-                    let to_outer = format_ident!("{name}_to_outer");
-                    let variant = ident_ccase!(pascal, name);
-                    let args = method.args.iter().map(|pat| &pat.pat).collect::<Vec<_>>();
-                    let types = method.args.iter().map(|pat| &pat.ty).collect::<Vec<_>>();
-                    quote! {
-                        #docs
-                        pub fn #name(self #(, #params)*) -> <#nested as Rpc>::Client<MappedTransport<_Transport, <#nested as Rpc>::Request, Request, <#nested as Rpc>::Response, Response, (#(#types,)*)>> {
-                            #nested::client(MappedTransport::new(self.0, (#(#args,)*), Self::#to_inner, Self::#to_outer))
-                        }
-
-                        fn #to_inner(outer: Response) -> Option<<#nested as Rpc>::Response> {
-                            if let Response::#variant(inner) = outer {
-                                Some(inner)
-                            } else {
-                                None
-                            }
-                        }
-
-                        fn #to_outer((#(#args,)*): (#(#types,)*), inner: <#nested as Rpc>::Request) -> Request {
-                            Request::#variant(#(#args,)*inner)
-                        }
-                    }
-                }
-            }
-        });
+        let async_client_fns = self.client_fns(true);
+        let blocking_client_fns = self.client_fns(false);
 
         quote! {
             #imports
@@ -185,7 +142,7 @@ impl ToTokens for Rpc {
             mod #module {
                 use super::*;
                 use ::trait_link::{
-                    LinkError, MappedTransport, Rpc, Transport,
+                    AsyncTransport, BlockingTransport, LinkError, MappedTransport, Rpc ,
                     serde::{Deserialize, Serialize},
                 };
                 use std::marker::PhantomData;
@@ -198,18 +155,19 @@ impl ToTokens for Rpc {
                 pub struct Service #generics #phantom_data;
 
                 impl #generics Rpc for Service #generics {
-                    type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
+                    type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>> = AsyncClient<T>;
+                    type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>> = BlockingClient<T>;
                     type Request = Request #generics;
                     type Response = Response #generics;
+                    fn async_client<_Transport: AsyncTransport<Request, Response>>(transport: _Transport) -> AsyncClient<_Transport> {
+                        AsyncClient(transport)
+                    }
+                    fn blocking_client<_Transport: BlockingTransport<Request, Response>>(transport: _Transport) -> BlockingClient<_Transport> {
+                        BlockingClient(transport)
+                    }
                 }
 
                 impl Service {
-                    /// Create a new client, using the given underlying transport, if you wish to re-use the
-                    /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
-                    pub fn client<_Transport: Transport<Request, Response>>(transport: _Transport) -> Client<_Transport> {
-                        Client(transport)
-                    }
-
                     /// Create a new [Handler](trait_link::Handler) for the service
                     pub fn server<S: Server>(server: S) -> Handler<S> {
                         Handler(server)
@@ -256,15 +214,30 @@ impl ToTokens for Rpc {
                     #(#[doc = #docs])*
                     ///
                 )*
-                /// This is the client for the service, it produces requests from method calls
+                /// This is the async client for the service, it produces requests from method calls
                 /// (including chained method calls) and sends the requests with the given
-                /// [transport](::trait_link::Transport) before returning the response
+                /// [transport](::trait_link::AsyncTransport) before returning the response
                 ///
                 /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
                 #[derive(Debug, Copy, Clone)]
-                pub struct Client<_Transport>(_Transport);
-                impl<_Transport: Transport<Request, Response> #(, #gen_params)*> Client<_Transport> {
-                    #(#client_fns)*
+                pub struct AsyncClient<_Transport>(_Transport);
+                impl<_Transport: AsyncTransport<Request, Response> #(, #gen_params)*> AsyncClient<_Transport> {
+                    #(#async_client_fns)*
+                }
+
+                #(
+                    #(#[doc = #docs])*
+                    ///
+                )*
+                /// This is the blocking client for the service, it produces requests from method calls
+                /// (including chained method calls) and sends the requests with the given
+                /// [transport](::trait_link::AsyncTransport) before returning the response
+                ///
+                /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
+                #[derive(Debug, Copy, Clone)]
+                pub struct BlockingClient<_Transport>(_Transport);
+                impl<_Transport: BlockingTransport<Request, Response> #(, #gen_params)*> BlockingClient<_Transport> {
+                    #(#blocking_client_fns)*
                 }
             }
         }
@@ -272,5 +245,77 @@ impl ToTokens for Rpc {
 
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(self.to_token_stream())
+    }
+}
+
+impl Rpc {
+    fn client_fns(&self, is_async: bool) -> impl Iterator<Item=TokenStream> {
+        let await_ = if is_async {
+            vec![quote!(.await)]
+        } else {
+            vec![]
+        };
+        let async_ = if is_async {
+            vec![quote!(async)]
+        } else {
+            vec![]
+        };
+        self.methods.iter().map(move |method| {
+            let name = &method.name;
+            let params = &method.args;
+            let args = method.args.iter().map(|pat| &pat.pat);
+            let variant = ident_ccase!(pascal, name);
+            let docs = &method.docs;
+            let docs = quote! {
+                #(#[doc = #docs])*
+            };
+            let client = if is_async {
+                format_ident!("AsyncClient")
+            } else {
+                format_ident!("BlockingClient")
+            };
+            let new_client = ident_ccase!(snake, client);
+            match &method.ret {
+                ReturnType::Simple(ret) => {
+                    quote! {
+                        #docs
+                        pub #(#async_)* fn #name(self #(, #params)*) -> Result<#ret, LinkError<_Transport::Error>> {
+                            if let Response::#variant(value) = self.0
+                                    .send(Request::#variant(#(#args),*))
+                                    #(#await_)*? {
+                                Ok(value)
+                            } else {
+                                Err(LinkError::WrongResponseType)
+                            }
+                        }
+                    }
+                }
+                ReturnType::Nested { service: nested } => { // TODO account for sub-service error
+                    let to_inner = format_ident!("{name}_to_inner");
+                    let to_outer = format_ident!("{name}_to_outer");
+                    let variant = ident_ccase!(pascal, name);
+                    let args = method.args.iter().map(|pat| &pat.pat).collect::<Vec<_>>();
+                    let types = method.args.iter().map(|pat| &pat.ty).collect::<Vec<_>>();
+                    quote! {
+                        #docs
+                        pub fn #name(self #(, #params)*) -> <#nested as Rpc>::#client<MappedTransport<_Transport, <#nested as Rpc>::Request, Request, <#nested as Rpc>::Response, Response, (#(#types,)*)>> {
+                            #nested::#new_client(MappedTransport::new(self.0, (#(#args,)*), Self::#to_inner, Self::#to_outer))
+                        }
+
+                        fn #to_inner(outer: Response) -> Option<<#nested as Rpc>::Response> {
+                            if let Response::#variant(inner) = outer {
+                                Some(inner)
+                            } else {
+                                None
+                            }
+                        }
+
+                        fn #to_outer((#(#args,)*): (#(#types,)*), inner: <#nested as Rpc>::Request) -> Request {
+                            Request::#variant(#(#args,)*inner)
+                        }
+                    }
+                }
+            }
+        })
     }
 }

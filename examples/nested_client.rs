@@ -1,11 +1,12 @@
 use axum::http::Method;
+use trait_link::Rpc;
 
 include!("traits/nested.rs");
 
 #[tokio::main]
 async fn main() {
-    let browser = trait_link::client::reqwest::Client::new("http://localhost:8080/api", Method::POST);
-    let client = ApiService::client(&browser);
+    let browser = trait_link::client::reqwest::AsyncClient::new("http://localhost:8080/api", Method::POST);
+    let client = ApiService::async_client(&browser);
     let dylan = client
         .users()
         .new(NewUser {

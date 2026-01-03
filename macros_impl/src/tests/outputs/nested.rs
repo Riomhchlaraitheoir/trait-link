@@ -1,28 +1,28 @@
 pub use api_service::{
-    Client as ApiServiceClient, Server as ApiServiceServer, Service as ApiService,
+    AsyncClient as ApiServiceAsyncClient, BlockingClient as ApiServiceBlockingClient, Server as ApiServiceServer, Service as ApiService,
 };
 mod api_service {
     use super::*;
     use ::trait_link::{
-        LinkError, MappedTransport, Rpc, Transport,
+        AsyncTransport, BlockingTransport, LinkError, MappedTransport, Rpc,
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
     /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
-        type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
+        type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>> = AsyncClient<T>;
+        type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>> = BlockingClient<T>;
         type Request = Request;
         type Response = Response;
+        fn async_client<_Transport: AsyncTransport<Request, Response>>(transport: _Transport) -> AsyncClient<_Transport> {
+            AsyncClient(transport)
+        }
+        fn blocking_client<_Transport: BlockingTransport<Request, Response>>(transport: _Transport) -> BlockingClient<_Transport> {
+            BlockingClient(transport)
+        }
     }
     impl Service {
-        /// Create a new client, using the given underlying transport, if you wish to re-use the
-        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
-        pub fn client<_Transport: Transport<Request, Response>>(
-            transport: _Transport,
-        ) -> Client<_Transport> {
-            Client(transport)
-        }
         /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
@@ -75,20 +75,20 @@ mod api_service {
         }
     }
 
-    /// This is the client for the service, it produces requests from method calls
+    /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::Transport) before returning the response
+    /// [transport](::trait_link::AsyncTransport) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
-    pub struct Client<_Transport>(_Transport);
-    impl<_Transport: Transport<Request, Response>> Client<_Transport> {
+    pub struct AsyncClient<_Transport>(_Transport);
+    impl<_Transport: AsyncTransport<Request, Response>> AsyncClient<_Transport> {
         pub fn users(
             self,
-        ) -> <UsersService as Rpc>::Client<
+        ) -> <UsersService as Rpc>::AsyncClient<
             MappedTransport<_Transport, <UsersService as Rpc>::Request, Request, <UsersService as Rpc>::Response, Response, ()>,
         > {
-            UsersService::client(MappedTransport::new(
+            UsersService::async_client(MappedTransport::new(
                 self.0,
                 (),
                 Self::users_to_inner,
@@ -117,32 +117,74 @@ mod api_service {
             }
         }
     }
+    /// This is the blocking client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::AsyncTransport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
+    #[derive(Debug, Copy, Clone)]
+    pub struct BlockingClient<_Transport>(_Transport);
+    impl<_Transport: BlockingTransport<Request, Response>> BlockingClient<_Transport> {
+        pub fn users(
+            self,
+        ) -> <UsersService as Rpc>::BlockingClient<
+            MappedTransport<_Transport, <UsersService as Rpc>::Request, Request, <UsersService as Rpc>::Response, Response, ()>,
+        > {
+            UsersService::blocking_client(MappedTransport::new(
+                self.0,
+                (),
+                Self::users_to_inner,
+                Self::users_to_outer,
+            ))
+        }
+        fn users_to_inner(outer: Response) -> Option<<UsersService as Rpc>::Response> {
+            if let Response::Users(inner) = outer {
+                Some(inner)
+            } else {
+                None
+            }
+        }
+        fn users_to_outer((): (), inner: <UsersService as Rpc>::Request) -> Request {
+            Request::Users(inner)
+        }
+        pub fn login(
+            self,
+            username: String,
+            password: String,
+        ) -> Result<LoginToken, LinkError<_Transport::Error>> {
+            if let Response::Login(value) = self.0.send(Request::Login(username, password))? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+    }
 }
 pub use users_service::{
-    Client as UsersServiceClient, Server as UsersServiceServer, Service as UsersService,
+    AsyncClient as UsersServiceAsyncClient, BlockingClient as UsersServiceBlockingClient, Server as UsersServiceServer, Service as UsersService,
 };
 mod users_service {
     use super::*;
     use ::trait_link::{
-        LinkError, MappedTransport, Rpc, Transport,
+        AsyncTransport, BlockingTransport, LinkError, MappedTransport, Rpc,
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
     /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
-        type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
+        type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>> = AsyncClient<T>;
+type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>> = BlockingClient<T>;
         type Request = Request;
         type Response = Response;
+                    fn async_client<_Transport: AsyncTransport<Request, Response>>(transport: _Transport) -> AsyncClient<_Transport> {
+                        AsyncClient(transport)
+                    }
+                    fn blocking_client<_Transport: BlockingTransport<Request, Response>>(transport: _Transport) -> BlockingClient<_Transport> {
+                        BlockingClient(transport)
+                    }
     }
     impl Service {
-        /// Create a new client, using the given underlying transport, if you wish to re-use the
-        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
-        pub fn client<_Transport: Transport<Request, Response>>(
-            transport: _Transport,
-        ) -> Client<_Transport> {
-            Client(transport)
-        }
         /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
@@ -208,14 +250,14 @@ mod users_service {
         }
     }
 
-    /// This is the client for the service, it produces requests from method calls
+    /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::Transport) before returning the response
+    /// [transport](::trait_link::AsyncTransport) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
-    pub struct Client<_Transport>(_Transport);
-    impl<_Transport: Transport<Request, Response>> Client<_Transport> {
+    pub struct AsyncClient<_Transport>(_Transport);
+    impl<_Transport: AsyncTransport<Request, Response>> AsyncClient<_Transport> {
         pub async fn new(self, user: User) -> Result<User, LinkError<_Transport::Error>> {
             if let Response::New(value) = self.0.send(Request::New(user)).await? {
                 Ok(value)
@@ -233,10 +275,10 @@ mod users_service {
         pub fn by_id(
             self,
             id: u64,
-        ) -> <UserService as Rpc>::Client<
+        ) -> <UserService as Rpc>::AsyncClient<
             MappedTransport<_Transport, <UserService as Rpc>::Request, Request, <UserService as Rpc>::Response, Response, (u64,)>
         > {
-            UserService::client(MappedTransport::new(
+            UserService::async_client(MappedTransport::new(
                 self.0,
                 (id,),
                 Self::by_id_to_inner,
@@ -256,10 +298,82 @@ mod users_service {
         pub fn current(
             self,
             token: LoginToken,
-        ) -> <UserService as Rpc>::Client<
+        ) -> <UserService as Rpc>::AsyncClient<
             MappedTransport<_Transport, <UserService as Rpc>::Request, Request, <UserService as Rpc>::Response, Response, (LoginToken,)>
         > {
-            UserService::client(MappedTransport::new(
+            UserService::async_client(MappedTransport::new(
+                self.0,
+                (token,),
+                Self::current_to_inner,
+                Self::current_to_outer,
+            ))
+        }
+        fn current_to_inner(outer: Response) -> Option<<UserService as Rpc>::Response> {
+            if let Response::Current(inner) = outer {
+                Some(inner)
+            } else {
+                None
+            }
+        }
+        fn current_to_outer(
+            (token,): (LoginToken,),
+            inner: <UserService as Rpc>::Request,
+        ) -> Request {
+            Request::Current(token, inner)
+        }
+    }
+    /// This is the blocking client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::AsyncTransport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
+    #[derive(Debug, Copy, Clone)]
+    pub struct BlockingClient<_Transport>(_Transport);
+    impl<_Transport: BlockingTransport<Request, Response>> BlockingClient<_Transport> {
+        pub fn new(self, user: User) -> Result<User, LinkError<_Transport::Error>> {
+            if let Response::New(value) = self.0.send(Request::New(user))? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        pub fn list(self) -> Result<Vec<User>, LinkError<_Transport::Error>> {
+            if let Response::List(value) = self.0.send(Request::List())? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        pub fn by_id(
+            self,
+            id: u64,
+        ) -> <UserService as Rpc>::BlockingClient<
+            MappedTransport<_Transport, <UserService as Rpc>::Request, Request, <UserService as Rpc>::Response, Response, (u64,)>
+        > {
+            UserService::blocking_client(MappedTransport::new(
+                self.0,
+                (id,),
+                Self::by_id_to_inner,
+                Self::by_id_to_outer,
+            ))
+        }
+        fn by_id_to_inner(outer: Response) -> Option<<UserService as Rpc>::Response> {
+            if let Response::ById(inner) = outer {
+                Some(inner)
+            } else {
+                None
+            }
+        }
+        fn by_id_to_outer((id,): (u64,), inner: <UserService as Rpc>::Request) -> Request {
+            Request::ById(id, inner)
+        }
+        pub fn current(
+            self,
+            token: LoginToken,
+        ) -> <UserService as Rpc>::BlockingClient<
+            MappedTransport<_Transport, <UserService as Rpc>::Request, Request, <UserService as Rpc>::Response, Response, (LoginToken,)>
+        > {
+            UserService::blocking_client(MappedTransport::new(
                 self.0,
                 (token,),
                 Self::current_to_inner,
@@ -282,30 +396,30 @@ mod users_service {
     }
 }
 pub use user_service::{
-    Client as UserServiceClient, Server as UserServiceServer, Service as UserService,
+    AsyncClient as UserServiceAsyncClient, BlockingClient as UserServiceBlockingClient, Server as UserServiceServer, Service as UserService,
 };
 mod user_service {
     use super::*;
     use ::trait_link::{
-        LinkError, MappedTransport, Rpc, Transport,
+        AsyncTransport, BlockingTransport, LinkError, MappedTransport, Rpc,
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
     /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
-        type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
+        type AsyncClient<T: AsyncTransport<Self::Request, Self::Response>> = AsyncClient<T>;
+type BlockingClient<T: BlockingTransport<Self::Request, Self::Response>> = BlockingClient<T>;
         type Request = Request;
         type Response = Response;
+                    fn async_client<_Transport: AsyncTransport<Request, Response>>(transport: _Transport) -> AsyncClient<_Transport> {
+                        AsyncClient(transport)
+                    }
+                    fn blocking_client<_Transport: BlockingTransport<Request, Response>>(transport: _Transport) -> BlockingClient<_Transport> {
+                        BlockingClient(transport)
+                    }
     }
     impl Service {
-        /// Create a new client, using the given underlying transport, if you wish to re-use the
-        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
-        pub fn client<_Transport: Transport<Request, Response>>(
-            transport: _Transport,
-        ) -> Client<_Transport> {
-            Client(transport)
-        }
         /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
@@ -353,14 +467,14 @@ mod user_service {
         }
     }
 
-    /// This is the client for the service, it produces requests from method calls
+    /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::Transport) before returning the response
+    /// [transport](::trait_link::AsyncTransport) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
-    pub struct Client<_Transport>(_Transport);
-    impl<_Transport: Transport<Request, Response>> Client<_Transport> {
+    pub struct AsyncClient<_Transport>(_Transport);
+    impl<_Transport: AsyncTransport<Request, Response>> AsyncClient<_Transport> {
         pub async fn get(
             self,
         ) -> Result<Result<User, UserNotFound>, LinkError<_Transport::Error>> {
@@ -385,6 +499,44 @@ mod user_service {
             user: User,
         ) -> Result<Result<User, UserNotFound>, LinkError<_Transport::Error>> {
             if let Response::Delete(value) = self.0.send(Request::Delete(user)).await? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+    }
+    /// This is the blocking client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::AsyncTransport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
+    #[derive(Debug, Copy, Clone)]
+    pub struct BlockingClient<_Transport>(_Transport);
+    impl<_Transport: BlockingTransport<Request, Response>> BlockingClient<_Transport> {
+        pub fn get(
+            self,
+        ) -> Result<Result<User, UserNotFound>, LinkError<_Transport::Error>> {
+            if let Response::Get(value) = self.0.send(Request::Get())? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        pub fn update(
+            self,
+            user: User,
+        ) -> Result<Result<User, UserNotFound>, LinkError<_Transport::Error>> {
+            if let Response::Update(value) = self.0.send(Request::Update(user))? {
+                Ok(value)
+            } else {
+                Err(LinkError::WrongResponseType)
+            }
+        }
+        pub fn delete(
+            self,
+            user: User,
+        ) -> Result<Result<User, UserNotFound>, LinkError<_Transport::Error>> {
+            if let Response::Delete(value) = self.0.send(Request::Delete(user))? {
                 Ok(value)
             } else {
                 Err(LinkError::WrongResponseType)
