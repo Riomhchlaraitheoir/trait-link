@@ -51,7 +51,7 @@ impl User {
 async fn main() {
     let api: &'static Api = Box::leak(Box::new(Api::default()));
     let app = Router::new()
-        .route("/api", post(trait_link::server::serve))
+        .route("/api", post(trait_link::server::axum::json))
         .with_state(Arc::new(ApiService::server(api)));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")

@@ -28,7 +28,7 @@ impl TodoServiceServer for &Todos {
 async fn main() {
     let server: &'static _ = Box::leak(Box::new(Todos::default()));
     let app = axum::Router::new()
-        .route("/api/todo", post(trait_link::server::serve))
+        .route("/api/todo", post(trait_link::server::axum::json))
         .with_state(Arc::new(TodoService::server(server)));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
     axum::serve::serve(listener, app).await.unwrap()

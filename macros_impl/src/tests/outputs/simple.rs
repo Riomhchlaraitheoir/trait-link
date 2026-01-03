@@ -10,6 +10,9 @@ mod todo_service {
     };
     use std::marker::PhantomData;
 
+    /// A service for managing to-do items
+    /// 
+    /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
 
     impl Rpc for Service {
@@ -19,12 +22,15 @@ mod todo_service {
     }
 
     impl Service {
+        /// Create a new client, using the given underlying transport, if you wish to re-use the
+        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
         pub fn client<_Transport: Transport<Request, Response>>(
             transport: _Transport,
         ) -> Client<_Transport> {
             Client(transport)
         }
 
+        /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
         }
@@ -54,12 +60,19 @@ mod todo_service {
         NewTodo(()),
     }
 
+    /// A service for managing to-do items
+    ///
+    /// This is the trait which is used by the server side in order to serve the client
     pub trait Server {
+        /// Get a list of to-do items
         fn get_todos(self) -> impl Future<Output = Vec<Todo>> + Send;
+        /// Get a to-do item by name, returns None if no to-do item with the given name exists
         fn get_todo(self, name: String) -> impl Future<Output = Option<Todo>> + Send;
+        /// Create a new to-do item
         fn new_todo(self, todo: Todo) -> impl Future<Output = ()> + Send;
     }
 
+    /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
     #[derive(Debug, Copy, Clone)]
     pub struct Handler<_Server: Server>(_Server);
 
@@ -75,10 +88,18 @@ mod todo_service {
         }
     }
 
+    /// A service for managing to-do items
+    ///
+    /// This is the client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::Transport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct Client<_Transport>(_Transport);
 
     impl<_Transport: Transport<Request, Response>> Client<_Transport> {
+        /// Get a list of to-do items
         pub async fn get_todos(self) -> Result<Vec<Todo>, LinkError<_Transport::Error>> {
             if let Response::GetTodos(value) = self.0.send(Request::GetTodos()).await? {
                 Ok(value)
@@ -86,6 +107,7 @@ mod todo_service {
                 Err(LinkError::WrongResponseType)
             }
         }
+        /// Get a to-do item by name, returns None if no to-do item with the given name exists
         pub async fn get_todo(
             self,
             name: String,
@@ -96,6 +118,7 @@ mod todo_service {
                 Err(LinkError::WrongResponseType)
             }
         }
+        /// Create a new to-do item
         pub async fn new_todo(self, todo: Todo) -> Result<(), LinkError<_Transport::Error>> {
             if let Response::NewTodo(value) = self.0.send(Request::NewTodo(todo)).await? {
                 Ok(value)

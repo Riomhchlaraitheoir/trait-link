@@ -4,16 +4,20 @@ use serde::de::DeserializeOwned;
 use crate::{LinkError, Transport};
 pub use reqwest::Error;
 
+/// A Client which uses the [reqwest] crate
 pub struct Client {
     client: reqwest::Client,
     url: String,
+    method: reqwest::Method,
 }
 
 impl Client {
-    pub fn new(url: &str) -> Self {
+    /// Create a new client using the given URL and method
+    pub fn new(url: &str, method: reqwest::Method) -> Self {
         Self {
             client: reqwest::Client::new(),
             url: url.to_string(),
+            method,
         }
     }
 }
@@ -40,7 +44,7 @@ where
     async fn send(self, request: Req) -> Result<Resp, LinkError<Self::Error>> {
         Ok(self
             .client
-            .post(&self.url)
+            .request(self.method.clone(), &self.url)
             .json(&request)
             .send()
             .await?

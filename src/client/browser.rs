@@ -3,6 +3,7 @@
 //! This provides a transport implementation which uses the Browser's Fetch API to send http
 //! requests and parse the response body as JSON
 
+use bon::bon;
 use crate::{LinkError, Transport};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -12,14 +13,30 @@ use wasm_bindgen_futures::wasm_bindgen::JsCast;
 use web_sys::wasm_bindgen::JsValue;
 use web_sys::{Request, RequestInit, RequestMode, Response, Window};
 
+/// A client which uses the browsers Fetch API along with JSON format (via serde),
+/// only supported on wasm32 architecture
 pub struct Client {
     url: String,
     window: Window,
     request_options: RequestInit,
 }
 
+#[bon]
 impl Client {
-    pub fn new(url: &str, method: &str, mode: RequestMode) -> Self {
+    /// Create a new client
+    #[builder]
+    pub fn new(
+        /// The url that the service can be reached at
+        url: &str,
+        /// The HTTP method to use, default: POST
+        method: Option<&str>,
+        /// The request [mode](https://developer.mozilla.org/en-US/docs/Web/API/RequestInit#mode) to be used, defaults to [cors](RequestMode::Cors)
+        mode: Option<RequestMode>,
+    ) -> Self {
+        // apply defaults
+        let method = method.unwrap_or("POST");
+        let mode = mode.unwrap_or(RequestMode::Cors);
+
         let window = web_sys::window().expect("no global `window` exists");
         let opts = RequestInit::new();
         opts.set_method(method);
@@ -85,20 +102,28 @@ impl Client {
     }
 }
 
+/// This represents the various errors which can occur when using the Fetch API
 #[derive(Debug, Error)]
 pub enum Error {
+    /// An error occurred while serialising the request
     #[error("Failed to serialise request body: {0}")]
     Serialise(serde_json::Error),
+    /// An error occurred while build the request
     #[error("Failed to create new request: {0:?}")]
     NewRequest(JsValue),
+    /// An error occurred when setting request headers
     #[error("Failed to set request headers: {0:?}")]
     SetHeader(JsValue),
+    /// An error occurred when calling `fetch`
     #[error("Failed to send request: {0:?}")]
     Fetch(JsValue),
+    /// The response could not be cast to the expected type
     #[error("Response value is unexpected type: {0:?}")]
     CastResponse(JsValue),
+    /// An error occurred while parsing JSON
     #[error("Failed to parse Json body to javascript object: {0:?}")]
     ParseJson(JsValue),
+    /// An error occurred while deserialising parsed JSON
     #[error("Deserialization from javascript object failed: {0}")]
     Deserialize(#[from] serde_wasm_bindgen::Error),
 }

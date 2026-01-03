@@ -24,6 +24,7 @@ tower = { version = "0.5.2", optional = true }
 macros = { path = "macros" }
 serde_json = "1.0.145"
 futures = "0.3.31"
+bon = "3.8.1"
 
 # WASM dependencies
 wasm-bindgen-futures = { version = "0.4", optional = true }

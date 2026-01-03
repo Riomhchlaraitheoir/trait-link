@@ -8,6 +8,7 @@ mod api_service {
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
+    /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
         type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
@@ -15,11 +16,14 @@ mod api_service {
         type Response = Response;
     }
     impl Service {
+        /// Create a new client, using the given underlying transport, if you wish to re-use the
+        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
         pub fn client<_Transport: Transport<Request, Response>>(
             transport: _Transport,
         ) -> Client<_Transport> {
             Client(transport)
         }
+        /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
         }
@@ -42,6 +46,7 @@ mod api_service {
         #[serde(rename = "login")]
         Login(LoginToken),
     }
+    /// This is the trait which is used by the server side in order to serve the client
     pub trait Server {
         fn users(
             self,
@@ -52,6 +57,7 @@ mod api_service {
             password: String,
         ) -> impl Future<Output = LoginToken> + Send;
     }
+    /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
     #[derive(Debug, Copy, Clone)]
     pub struct Handler<_Server: Server>(_Server);
     impl<_Server: Server + Send> ::trait_link::Handler for Handler<_Server> {
@@ -69,6 +75,11 @@ mod api_service {
         }
     }
 
+    /// This is the client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::Transport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct Client<_Transport>(_Transport);
     impl<_Transport: Transport<Request, Response>> Client<_Transport> {
@@ -117,6 +128,7 @@ mod users_service {
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
+    /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
         type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
@@ -124,11 +136,14 @@ mod users_service {
         type Response = Response;
     }
     impl Service {
+        /// Create a new client, using the given underlying transport, if you wish to re-use the
+        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
         pub fn client<_Transport: Transport<Request, Response>>(
             transport: _Transport,
         ) -> Client<_Transport> {
             Client(transport)
         }
+        /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
         }
@@ -159,6 +174,7 @@ mod users_service {
         #[serde(rename = "current")]
         Current(<UserService as Rpc>::Response),
     }
+    /// This is the trait which is used by the server side in order to serve the client
     pub trait Server {
         fn new(self, user: User) -> impl Future<Output = User> + Send;
         fn list(self) -> impl Future<Output = Vec<User>> + Send;
@@ -171,6 +187,7 @@ mod users_service {
             token: LoginToken,
         ) -> impl Future<Output = impl ::trait_link::Handler<Service = UserService>> + Send;
     }
+    /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
     #[derive(Debug, Copy, Clone)]
     pub struct Handler<_Server: Server>(_Server);
     impl<_Server: Server + Send> ::trait_link::Handler for Handler<_Server> {
@@ -191,6 +208,11 @@ mod users_service {
         }
     }
 
+    /// This is the client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::Transport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct Client<_Transport>(_Transport);
     impl<_Transport: Transport<Request, Response>> Client<_Transport> {
@@ -269,6 +291,7 @@ mod user_service {
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
+    /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service;
     impl Rpc for Service {
         type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
@@ -276,11 +299,14 @@ mod user_service {
         type Response = Response;
     }
     impl Service {
+        /// Create a new client, using the given underlying transport, if you wish to re-use the
+        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
         pub fn client<_Transport: Transport<Request, Response>>(
             transport: _Transport,
         ) -> Client<_Transport> {
             Client(transport)
         }
+        /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
         }
@@ -307,11 +333,13 @@ mod user_service {
         #[serde(rename = "delete")]
         Delete(Result<User, UserNotFound>),
     }
+    /// This is the trait which is used by the server side in order to serve the client
     pub trait Server {
         fn get(self) -> impl Future<Output = Result<User, UserNotFound>> + Send;
         fn update(self, user: User) -> impl Future<Output = Result<User, UserNotFound>> + Send;
         fn delete(self, user: User) -> impl Future<Output = Result<User, UserNotFound>> + Send;
     }
+    /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
     #[derive(Debug, Copy, Clone)]
     pub struct Handler<_Server: Server>(_Server);
     impl<_Server: Server + Send> ::trait_link::Handler for Handler<_Server> {
@@ -325,6 +353,11 @@ mod user_service {
         }
     }
 
+    /// This is the client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::Transport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct Client<_Transport>(_Transport);
     impl<_Transport: Transport<Request, Response>> Client<_Transport> {

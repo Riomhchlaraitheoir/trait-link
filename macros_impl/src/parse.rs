@@ -1,7 +1,5 @@
 use crate::{Method, Rpc};
-use syn::{
-    FnArg, ItemTrait, ReturnType, TraitItem, TraitItemFn, Type, TypeParamBound, parse_quote,
-};
+use syn::{FnArg, ItemTrait, ReturnType, TraitItem, TraitItemFn, Type, TypeParamBound, parse_quote, Attribute, MetaNameValue, Meta, Expr};
 
 pub struct Parser;
 
@@ -21,7 +19,9 @@ impl Parser {
                 "supertraits are not supported",
             ));
         }
+        let docs = input.attrs.iter().flat_map(docs).collect();
         Ok(Rpc {
+            docs,
             vis: input.vis,
             generics: input.generics,
             name: input.ident,
@@ -84,7 +84,8 @@ impl Parser {
             return Err(syn::Error::new_spanned(item, "missing self"));
         }
         let ret = self.return_type(item.sig.output)?;
-        Ok(Method { name, args, ret })
+        let docs = item.attrs.iter().flat_map(docs).collect();
+        Ok(Method { docs, name, args, ret })
     }
 
     fn return_type(&self, output: ReturnType) -> syn::Result<super::ReturnType> {
@@ -150,5 +151,17 @@ mod test {
         let parser = Parser;
         let output = parser.return_type(input).expect("failed to parse input");
         assert_eq!(output, expected);
+    }
+}
+
+fn docs(attr: &Attribute) -> Option<Expr> {
+    if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta {
+        if path.is_ident("doc") {
+            Some(value.clone())
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }

@@ -1,7 +1,7 @@
 use crate::parse::Parser;
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{Generics, ItemTrait, PatType, Path, Type, Visibility};
+use syn::{Expr, Generics, ItemTrait, PatType, Path, Type, Visibility};
 
 #[cfg(test)]
 mod tests;
@@ -15,6 +15,7 @@ pub fn rpc(_args: TokenStream, input: ItemTrait) -> syn::Result<impl ToTokens> {
 }
 
 struct Rpc {
+    docs: Vec<Expr>,
     vis: Visibility,
     generics: Generics,
     name: Ident,
@@ -22,6 +23,7 @@ struct Rpc {
 }
 
 struct Method {
+    docs: Vec<Expr>,
     name: Ident,
     args: Vec<PatType>,
     ret: ReturnType,

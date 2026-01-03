@@ -23,6 +23,11 @@ impl ToTokens for Rpc {
             let params = generics.params.iter();
             quote!((PhantomData<(#(#params),*)>))
         };
+        let docs = if self.docs.is_empty() {
+            None
+        } else {
+            Some(&self.docs)
+        }.into_iter().collect::<Vec<_>>();
 
         let imports = {
             let vis = &self.vis;
@@ -82,14 +87,20 @@ impl ToTokens for Rpc {
         let server_fns = self.methods.iter().map(|method| {
             let name = &method.name;
             let params = &method.args;
+            let docs = &method.docs;
+            let docs = quote! {
+                #(#[doc = #docs])*
+            };
             match &method.ret {
                 ReturnType::Simple(ret) => {
                     quote! {
+                        #docs
                         fn #name(self #(,#params)*) -> impl Future<Output=#ret> + Send;
                     }
                 }
                 ReturnType::Nested { service: path } => {
                     quote! {
+                        #docs
                         fn #name(self #(,#params)*) -> impl Future<Output = impl ::trait_link::Handler<Service = #path>> + Send;
                     }
                 }
@@ -121,9 +132,14 @@ impl ToTokens for Rpc {
             let params = &method.args;
             let args = method.args.iter().map(|pat| &pat.pat);
             let variant = ident_ccase!(pascal, name);
+            let docs = &method.docs;
+            let docs = quote! {
+                #(#[doc = #docs])*
+            };
             match &method.ret {
                 ReturnType::Simple(ret) => {
                     quote! {
+                        #docs
                         pub async fn #name(self #(, #params)*) -> Result<#ret, LinkError<_Transport::Error>> {
                             if let Response::#variant(value) = self.0
                                     .send(Request::#variant(#(#args),*))
@@ -142,6 +158,7 @@ impl ToTokens for Rpc {
                     let args = method.args.iter().map(|pat| &pat.pat).collect::<Vec<_>>();
                     let types = method.args.iter().map(|pat| &pat.ty).collect::<Vec<_>>();
                     quote! {
+                        #docs
                         pub fn #name(self #(, #params)*) -> <#nested as Rpc>::Client<MappedTransport<_Transport, <#nested as Rpc>::Request, Request, <#nested as Rpc>::Response, Response, (#(#types,)*)>> {
                             #nested::client(MappedTransport::new(self.0, (#(#args,)*), Self::#to_inner, Self::#to_outer))
                         }
@@ -173,6 +190,11 @@ impl ToTokens for Rpc {
                 };
                 use std::marker::PhantomData;
 
+                #(
+                    #(#[doc = #docs])*
+                    ///
+                )*
+                /// This is the [Rpc](::trait_link::Rpc) definition for this service
                 pub struct Service #generics #phantom_data;
 
                 impl #generics Rpc for Service #generics {
@@ -182,10 +204,13 @@ impl ToTokens for Rpc {
                 }
 
                 impl Service {
+                    /// Create a new client, using the given underlying transport, if you wish to re-use the
+                    /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
                     pub fn client<_Transport: Transport<Request, Response>>(transport: _Transport) -> Client<_Transport> {
                         Client(transport)
                     }
 
+                    /// Create a new [Handler](trait_link::Handler) for the service
                     pub fn server<S: Server>(server: S) -> Handler<S> {
                         Handler(server)
                     }
@@ -206,10 +231,16 @@ impl ToTokens for Rpc {
                     #(#response_variants,)*
                 }
 
+                #(
+                    #(#[doc = #docs])*
+                    ///
+                )*
+                /// This is the trait which is used by the server side in order to serve the client
                 pub trait Server #generics {
                     #(#server_fns)*
                 }
 
+                /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
                 #[derive(Debug, Copy, Clone)]
                 pub struct Handler<_Server: Server>(_Server);
                 impl<_Server: Server + Send> ::trait_link::Handler for Handler<_Server> {
@@ -221,6 +252,15 @@ impl ToTokens for Rpc {
                     }
                 }
 
+                #(
+                    #(#[doc = #docs])*
+                    ///
+                )*
+                /// This is the client for the service, it produces requests from method calls
+                /// (including chained method calls) and sends the requests with the given
+                /// [transport](::trait_link::Transport) before returning the response
+                ///
+                /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
                 #[derive(Debug, Copy, Clone)]
                 pub struct Client<_Transport>(_Transport);
                 impl<_Transport: Transport<Request, Response> #(, #gen_params)*> Client<_Transport> {

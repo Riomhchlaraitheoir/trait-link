@@ -6,6 +6,7 @@ mod resources {
         serde::{Deserialize, Serialize},
     };
     use std::marker::PhantomData;
+    /// This is the [Rpc](::trait_link::Rpc) definition for this service
     pub struct Service<T>(PhantomData<(T)>);
     impl<T> Rpc for Service<T> {
         type Client<T: Transport<Self::Request, Self::Response>> = Client<T>;
@@ -13,9 +14,12 @@ mod resources {
         type Response = Response<T>;
     }
     impl Service {
+        /// Create a new client, using the given underlying transport, if you wish to re-use the
+        /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)
         pub fn client<_Transport: Transport<Request, Response>>(transport: _Transport) -> Client<_Transport> {
             Client(transport)
         }
+        /// Create a new [Handler](trait_link::Handler) for the service
         pub fn server<S: Server>(server: S) -> Handler<S> {
             Handler(server)
         }
@@ -42,11 +46,13 @@ mod resources {
         #[serde(rename = "new")]
         New(()),
     }
+    /// This is the trait which is used by the server side in order to serve the client
     pub trait Server<T> {
         fn list(self) -> impl Future<Output = Vec<T>> + Send;
         fn get(self, id: usize) -> impl Future<Output = Option<T>> + Send;
         fn new(self, value: T) -> impl Future<Output = ()> + Send;
     }
+    /// A [Handler](::trait_link::Handler) which handles requests/responses for a given service
     #[derive(Debug, Copy, Clone)]
     pub struct Handler<_Server: Server>(_Server);
     impl<_Server: Server + Send> ::trait_link::Handler for Handler<_Server> {
@@ -59,6 +65,11 @@ mod resources {
             }
         }
     }
+    /// This is the client for the service, it produces requests from method calls
+    /// (including chained method calls) and sends the requests with the given
+    /// [transport](::trait_link::Transport) before returning the response
+    ///
+    /// The return value is always wrapped in a result: `Result<T, LinkError<_Transport::Error>>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct Client<_Transport>(_Transport);
     impl<_Transport: Transport<Request, Response>, T> Client<_Transport> {
