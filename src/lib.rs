@@ -14,15 +14,15 @@ use crate::client::{AsyncClient, BlockingClient};
 
 /// This is a trait for the main entry point of the RPC, it describes the types for client,
 /// request and response
-pub trait Rpc: Sync + Sized {
+pub trait Rpc: Sized {
     /// This is the async client type used for accessing the RPC service
     type AsyncClient<T: AsyncClient<Self::Request, Self::Response>>;
     /// This is the blocking client type used for accessing the RPC service
     type BlockingClient<T: BlockingClient<Self::Request, Self::Response>>;
     /// This is the request type accepted by the service
-    type Request: Send + 'static;
+    type Request: 'static;
     /// This is the response type returned by the service
-    type Response: Send + 'static;
+    type Response: 'static;
 
     /// Create a new asynchronous client, using the given underlying transport, if you wish to re-use the
     /// client for multiple calls, ensure you pass a copyable transport (eg: a reference)

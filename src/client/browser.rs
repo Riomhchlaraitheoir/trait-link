@@ -5,8 +5,6 @@
 
 use bon::bon;
 use crate::{AsyncTransport};
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use thiserror::Error;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_futures::wasm_bindgen::JsCast;
@@ -96,7 +94,7 @@ pub enum Error {
     #[error("Response value is unexpected type: {0:?}")]
     CastResponse(JsValue),
     /// Failed to read binary body
-    #[error("Failed to read binary body: {0}")]
+    #[error("Failed to read binary body: {0:?}")]
     ReadBody(JsValue),
     /// An error occurred while deserialising parsed JSON
     #[error("Deserialization from javascript object failed: {0}")]

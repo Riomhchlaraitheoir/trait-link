@@ -72,11 +72,11 @@ impl Builder {
 }
 
 /// A client implementation for sending requests asynchronously
-pub trait AsyncClient<Req, Resp>: Clone + Send + Sync {
+pub trait AsyncClient<Req, Resp>: Clone {
     /// The error that can happen during send
     type Error: Error + MaybeWrongResponse + From<WrongResponseType> + 'static;
     /// Send a request and receive a response
-    fn send(&self, request: Req) -> impl Future<Output = Result<Resp, Self::Error>> + Send;
+    fn send(&self, request: Req) -> impl Future<Output = Result<Resp, Self::Error>>;
 }
 
 /// A client implementation for sending requests in a blocking manner
@@ -96,9 +96,8 @@ pub struct SimpleClient<F, T> {
 
 impl<F, T, Req, Resp> AsyncClient<Req, Resp> for SimpleClient<F, T>
 where
-    F: Format<Resp, Req> + Send,
+    F: Format<Resp, Req>,
     T: AsyncTransport,
-    Req: Send,
     Self: Clone
 {
     type Error = LinkError<F::WriteError, F::ReadError, T::Error>;
@@ -136,11 +135,11 @@ where
 /// request/response types
 ///
 /// Naturally a format and protocol the is supported by the server should be chosen
-pub trait AsyncTransport: Clone + Send + Sync {
+pub trait AsyncTransport: Clone {
     /// This is the error type which is returned in the case that some part of the transport failed
     type Error: Error + 'static;
     /// Sends the request and returns the response
-    fn send(&self, request: Vec<u8>, format_info: &FormatInfo) -> impl Future<Output=Result<Vec<u8>, Self::Error>> + Send;
+    fn send(&self, request: Vec<u8>, format_info: &FormatInfo) -> impl Future<Output=Result<Vec<u8>, Self::Error>>;
 }
 
 /// This trait describes the transport layer of a client,
@@ -212,8 +211,6 @@ for MappedClient<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
 where
     Args: Clone,
     T: AsyncClient<OuterReq, OuterResp>,
-    InnerReq: Send,
-    Self: Send + Sync,
 {
     type Error = T::Error;
     async fn send(&self, request: InnerReq) -> Result<InnerResp, Self::Error> {
