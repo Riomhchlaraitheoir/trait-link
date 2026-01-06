@@ -31,7 +31,7 @@ jobs:
     - name: Run Clippy
       run: cargo clippy --features axum,reqwest,reqwest-blocking,json,cbor -- -Dwarnings
     - name: Run Clippy for WASM target
-      run: cargo clippy --features reqwest,reqwest-blocking,json,cbor,browser,browser-json --target wasm32-unknown-unknown -- -Dwarnings
+      run: cargo clippy --features reqwest,json,cbor,browser,browser-json --target wasm32-unknown-unknown -- -Dwarnings
     - name: Run tests
       run: cargo test --verbose --features axum,reqwest,reqwest-blocking,json,cbor
     - name: Run tests for WASM target
