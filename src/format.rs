@@ -7,6 +7,12 @@ use std::io;
 mod json;
 #[cfg(feature = "json")]
 pub use json::Json;
+#[cfg(all(feature = "browser-json", target_arch = "wasm32"))]
+mod browser_json;
+#[cfg(all(feature = "browser-json", target_arch = "wasm32"))]
+pub use browser_json::BrowserJson;
+#[cfg(all(feature = "browser-json", not(target_arch = "wasm32")))]
+compile_error!("browser-json is only available on wasm32 arch");
 #[cfg(feature = "cbor")]
 mod cbor;
 #[cfg(feature = "cbor")]
