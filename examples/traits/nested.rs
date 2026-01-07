@@ -3,12 +3,6 @@ use trait_rpc::rpc;
 #[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct LoginToken(String);
 
-impl LoginToken {
-    pub fn generate_new() -> Self {
-        Self(String::from("<random UUID>"))
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Eq, PartialEq)]
 pub struct User {
     pub id: u64,

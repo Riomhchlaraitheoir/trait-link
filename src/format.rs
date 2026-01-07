@@ -1,4 +1,5 @@
 //! Defines format behaviour
+#![allow(clippy::missing_errors_doc, reason = "Errors are obvious")]
 
 use std::error::Error;
 use std::io;

@@ -11,6 +11,7 @@ macro_rules! ident_ccase {
 }
 
 impl ToTokens for Rpc {
+    #[allow(clippy::too_many_lines, reason = "This is a long function, but not too complex and splitting it would likely make it more confusing not less")]
     fn to_token_stream(&self) -> TokenStream {
         let service = &self.name;
         let module = ident_ccase!(snake, service);
@@ -77,7 +78,7 @@ impl ToTokens for Rpc {
             {
                 fields.push(parse_quote! {
                     <#ret as Rpc>::Request
-                })
+                });
             }
             quote!(
                 #[serde(rename = #snake_name)]
@@ -142,7 +143,7 @@ impl ToTokens for Rpc {
                         },
                     }
                 }
-                _ => {
+                ReturnType::Simple(_) => {
                     quote! {
                     Request::#variant(#(#params),*) => Response::#variant(self.0.#name(#(#params),*).await),
                 }
@@ -250,6 +251,7 @@ impl ToTokens for Rpc {
                 /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
                 #[derive(Debug, Copy, Clone)]
                 pub struct #async_client<_Client #(,#gen_params)*>(_Client, #phantom_data);
+                #[allow(clippy::future_not_send)]
                 impl<_Client: AsyncClient<Request #generics, Response #generics> #(, #gen_params)*> #async_client<_Client #(,#gen_params)*> {
                     #(#async_client_fns)*
                 }
@@ -273,7 +275,7 @@ impl ToTokens for Rpc {
     }
 
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(self.to_token_stream())
+        tokens.extend(self.to_token_stream());
     }
 }
 

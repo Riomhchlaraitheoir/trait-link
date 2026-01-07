@@ -113,6 +113,8 @@ mod todo_service {
     #[derive(Debug, Copy, Clone)]
     pub struct TodoServiceAsyncClient<_Client>(_Client);
 
+    #[allow(clippy::future_not_send)]
+
     impl<_Client: AsyncClient<Request, Response>> TodoServiceAsyncClient<_Client> {
         /// Get a list of to-do items
         pub async fn get_todos(&self) -> Result<Vec<Todo>, _Client::Error> {

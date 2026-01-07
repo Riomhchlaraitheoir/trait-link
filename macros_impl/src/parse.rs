@@ -1,16 +1,17 @@
 use crate::{Method, Rpc};
 use syn::{FnArg, ItemTrait, ReturnType, TraitItem, TraitItemFn, Type, TypeParamBound, parse_quote, Attribute, MetaNameValue, Meta, Expr};
 
+/// This contains any args in the attribute macro invocation that may affect parsing
+// There are no such args for now, but we will keep this just in case tha changes
 pub struct Parser;
 
+#[allow(clippy::unused_self)]
 impl Parser {
     pub fn rpc(&self, input: ItemTrait) -> syn::Result<Rpc> {
         let mut methods = vec![];
         for item in input.items {
-            match item {
-                TraitItem::Fn(item) => methods.push(self.method(item)?),
-                TraitItem::Type(_) => {}
-                _ => {}
+            if let TraitItem::Fn(item) = item {
+                methods.push(self.method(item)?);
             }
         }
         if !input.supertraits.is_empty() {
@@ -19,7 +20,7 @@ impl Parser {
                 "supertraits are not supported",
             ));
         }
-        let docs = input.attrs.iter().flat_map(docs).collect();
+        let docs = input.attrs.iter().filter_map(docs).collect();
         Ok(Rpc {
             docs,
             vis: input.vis,
@@ -84,7 +85,7 @@ impl Parser {
             return Err(syn::Error::new_spanned(item, "missing self"));
         }
         let ret = self.return_type(item.sig.output)?;
-        let docs = item.attrs.iter().flat_map(docs).collect();
+        let docs = item.attrs.iter().filter_map(docs).collect();
         Ok(Method { docs, name, args, ret })
     }
 
@@ -124,11 +125,25 @@ impl Parser {
     }
 }
 
+fn docs(attr: &Attribute) -> Option<Expr> {
+    if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta {
+        if path.is_ident("doc") {
+            Some(value.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::parse::Parser;
     use syn::parse_quote;
     use syn::{ReturnType, Type, TypeTuple};
+    use syn::punctuated::Punctuated;
+    use syn::token::Paren;
 
     macro_rules! return_type_tests {
         ($($name:ident: $output:expr => {$($input:tt)*}),*) => {
@@ -142,26 +157,15 @@ mod test {
     }
 
     return_type_tests![
-        unit: crate::ReturnType::Simple(Type::Tuple(TypeTuple { paren_token: Default::default(),elems: Default::default(),})) => {},
+        unit: crate::ReturnType::Simple(Type::Tuple(TypeTuple { paren_token: Paren::default(),elems: Punctuated::default(),})) => {},
         simple: crate::ReturnType::Simple(Type::Path(parse_quote!(String))) => {-> String},
         service: crate::ReturnType::Nested {  service: parse_quote!(SubService) } => { -> impl SubService }
     ];
 
+    #[allow(clippy::needless_pass_by_value)]
     fn test_return_type(input: ReturnType, expected: crate::ReturnType) {
         let parser = Parser;
         let output = parser.return_type(input).expect("failed to parse input");
         assert_eq!(output, expected);
-    }
-}
-
-fn docs(attr: &Attribute) -> Option<Expr> {
-    if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta {
-        if path.is_ident("doc") {
-            Some(value.clone())
-        } else {
-            None
-        }
-    } else {
-        None
     }
 }

@@ -1,13 +1,13 @@
-use axum::http::Method;
 use axum::Router;
-use futures::future::{ready, Either};
-use std::collections::hash_map::Entry;
+use axum::http::Method;
+use futures::future::{Either, ready};
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ops::Deref;
 use tokio::sync::RwLock;
+use trait_rpc::Handler;
 use trait_rpc::format::{Cbor, Json};
 use trait_rpc::server::axum::Axum;
-use trait_rpc::Handler;
 
 include!("traits/nested.rs");
 
@@ -26,24 +26,34 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
         .unwrap();
-    axum::serve(listener, app).await.unwrap()
+    axum::serve(listener, app).await.unwrap();
+}
+
+impl LoginToken {
+    #[must_use]
+    pub fn generate_new() -> Self {
+        Self(String::from("<random UUID>"))
+    }
 }
 
 impl Password {
     // no hashing used here since this is just intended to get the example compiling, not to be an actual example of password hashing
+    #[must_use]
     pub fn new(password: &str) -> Self {
         Self {
             hash: password.to_string(),
-            salt: "".to_string(),
+            salt: String::new(),
         }
     }
 
+    #[must_use]
     pub fn matches(&self, password: &str) -> bool {
         self.hash == password
     }
 }
 
 impl User {
+    #[must_use]
     pub fn new(id: u64, user: NewUser) -> Self {
         Self {
             id,
@@ -79,14 +89,19 @@ impl ApiServiceServer for Api {
 
     async fn login(&self, username: String, password: String) -> Option<LoginToken> {
         println!("received login request: username: {username}, password: {password}");
-        let users = self.users.read().await;
-        let user = users.values().find(|&user| user.username == username)?;
-        if !user.password.matches(&password) {
-            None
-        } else {
+        let user = self
+            .users
+            .read()
+            .await
+            .values()
+            .find(|&user| user.username == username)?
+            .clone();
+        if user.password.matches(&password) {
             let token = LoginToken::generate_new();
             self.tokens.write().await.insert(token.clone(), user.id);
             Some(token)
+        } else {
+            None
         }
     }
 }

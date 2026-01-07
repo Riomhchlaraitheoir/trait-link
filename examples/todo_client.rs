@@ -1,5 +1,7 @@
+#![doc = include_str!("./examples.md")]
+
 use trait_rpc::client::reqwest::Reqwest;
-use trait_rpc::*;
+use trait_rpc::{Rpc, client};
 use trait_rpc::format::Json;
 
 include!("traits/todo.rs");
@@ -18,10 +20,10 @@ async fn main() {
             .build()
     );
     for todo in client.get_todos().await.expect("get_todos failed") {
-        println!("{todo:?}")
+        println!("{todo:?}");
     }
     if let Some(todo) = client.get_todo("next".to_string()).await.expect("get_todo failed") {
-        println!("{todo:?}")
+        println!("{todo:?}");
     }
     client.new_todo(Todo {
         name: "Some task".to_string(),

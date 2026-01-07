@@ -1,3 +1,5 @@
+#![doc = include_str!("./examples.md")]
+
 use std::ops::Deref;
 use tokio::sync::RwLock;
 use trait_rpc::server::axum::Axum;
@@ -19,7 +21,7 @@ impl TodoServiceServer for Todos {
     }
 
     async fn new_todo(&self, todo: Todo) -> () {
-        self.todos.write().await.push(todo)
+        self.todos.write().await.push(todo);
     }
 }
 
@@ -35,5 +37,5 @@ async fn main() {
                    .build()
         );
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    axum::serve::serve(listener, app).await.unwrap()
+    axum::serve::serve(listener, app).await.unwrap();
 }

@@ -29,7 +29,7 @@ fn test_case(input: &'static str, expected: &'static str) {
                 };
                 if !attr.path().is_ident(&format_ident!("rpc")) {
                     return item.into_token_stream();
-                };
+                }
                 let args = match &attr.meta {
                     Meta::Path(_) => TokenStream::new(),
                     Meta::List(MetaList { tokens, .. }) => tokens.clone(),

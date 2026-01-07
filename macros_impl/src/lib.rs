@@ -9,6 +9,10 @@ mod parse;
 
 mod output;
 
+/// The function to invoke the rpc macro
+/// 
+/// # Errors
+/// Can return a [`syn::Error`] if it fails to parse the input or rejects some part of the input
 pub fn rpc(_args: TokenStream, input: ItemTrait) -> syn::Result<impl ToTokens> {
     let parser = Parser;
     parser.rpc(input)

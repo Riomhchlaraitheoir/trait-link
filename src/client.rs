@@ -1,4 +1,5 @@
 //! Contains modules for individual client implementations
+#![allow(clippy::future_not_send, reason = "Cannot explicitly make futures `Send` while supporting WASM")]
 
 use std::error::Error;
 use std::fmt::{Debug, Display};
@@ -22,7 +23,7 @@ compile_error!("reqwest-blocking feature is not available for wasm32 target arch
 
 #[must_use]
 /// Return a client builder
-pub fn builder() -> Builder {
+pub const fn builder() -> Builder {
     Builder
 }
 
@@ -34,7 +35,7 @@ pub struct Builder;
 impl Builder {
     /// Build an asynchronous client
     #[builder(finish_fn = build)]
-    pub fn non_blocking<F, T>(
+    pub const fn non_blocking<F, T>(
         self,
         /// The format to be used for serialisation and deserialisation
         ///
@@ -54,7 +55,7 @@ impl Builder {
 
     /// Build a blocking client
     #[builder(finish_fn = build)]
-    pub fn blocking<F, T>(
+    pub const fn blocking<F, T>(
         self,
         /// The format to be used for serialisation and deserialisation
         ///
@@ -174,6 +175,9 @@ pub trait BlockingTransport: Clone {
     /// This is the error type which is returned in the case that some part of the transport failed
     type Error: Error + 'static;
     /// Sends the request and returns the response
+    ///
+    /// # Errors
+    /// Returns an error in the case that the communication failed for any reason
     fn send(&self, request: Vec<u8>, format_info: &FormatInfo) -> Result<Vec<u8>, Self::Error>;
 }
 
@@ -206,7 +210,8 @@ for MappedClient<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
 impl<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
 MappedClient<T, InnerReq, OuterReq, InnerResp, OuterResp, Args>
 {
-    /// Create a new MappedTransport
+    #[doc(hidden)]
+    #[must_use]
     pub fn new(
         inner: T,
         args: Args,
@@ -259,7 +264,7 @@ where
 
 /// This is a error that the client may return after a request
 #[derive(Debug, Error, Clone)]
-pub enum LinkError<Ser: Display, De: Display, T: Error> {
+pub enum LinkError<Ser, De, T> {
     /// The transport layer returned an error
     #[error("Failed to send request: {0}")]
     Transport(#[source] T),
@@ -292,6 +297,7 @@ pub struct WrongResponseType {
 
 impl WrongResponseType {
     #[doc(hidden)]
+    #[must_use]
     pub fn new(expected: &str, actual: &str) -> Self {
         Self {
             expected: format!("{expected}()"),
@@ -299,6 +305,7 @@ impl WrongResponseType {
         }
     }
     #[doc(hidden)]
+    #[must_use]
     pub fn in_subservice(self, name: &str) -> Self {
         Self {
             expected: format!("{name}().{}", self.expected),
@@ -307,15 +314,19 @@ impl WrongResponseType {
     }
 }
 
-/// An error which might be a [WrongResponseType] error
+/// An error which might be a [`WrongResponseType`] error
 pub trait MaybeWrongResponse: Sized {
-    /// Try to cast to a [WrongResponseType]
+    /// Try to cast to a [`WrongResponseType`]
+    ///
+    /// # Errors
+    ///
+    /// Returns an Err variant with self if this value is not a [`WrongResponseType`]
     fn into_wrong_response(self) -> Result<WrongResponseType, Self>;
 }
 
 impl<Ser: Debug + Display, De: Debug + Display, T: Error> MaybeWrongResponse for LinkError<Ser, De, T> {
     fn into_wrong_response(self) -> Result<WrongResponseType, Self> {
-        if let LinkError::WrongResponseType(err) = self {
+        if let Self::WrongResponseType(err) = self {
             Ok(err)
         } else {
             Err(self)

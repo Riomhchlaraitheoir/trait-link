@@ -3,6 +3,9 @@ name = "trait-rpc-macros-impl"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 proc-macro2 = "1.0.103"
 syn = { version = "2.0.111", features = ["parsing", "full", "extra-traits"] }

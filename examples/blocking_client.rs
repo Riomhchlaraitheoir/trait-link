@@ -1,6 +1,8 @@
+#![doc = include_str!("./examples.md")]
+
 use axum::http::Method;
 use trait_rpc::client::reqwest_blocking::ReqwestBlocking;
-use trait_rpc::*;
+use trait_rpc::{Rpc, client};
 use trait_rpc::format::Json;
 
 include!("traits/todo.rs");
@@ -19,10 +21,10 @@ fn main() {
             .build()
     );
     for todo in client.get_todos().expect("get_todos failed") {
-        println!("{todo:?}")
+        println!("{todo:?}");
     }
     if let Some(todo) = client.get_todo("next".to_string()).expect("get_todo failed") {
-        println!("{todo:?}")
+        println!("{todo:?}");
     }
     client.new_todo(Todo {
         name: "Some task".to_string(),

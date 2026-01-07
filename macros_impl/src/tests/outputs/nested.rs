@@ -102,7 +102,8 @@ mod api_service {
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct ApiServiceAsyncClient<_Client>(_Client);
-    impl<_Client: AsyncClient<Request, Response>> ApiServiceAsyncClient<_Client> {
+    #[allow(clippy::future_not_send)]
+         impl<_Client: AsyncClient<Request, Response>> ApiServiceAsyncClient<_Client> {
         pub fn users(
             &self,
         ) -> <UsersService as Rpc>::AsyncClient<
@@ -313,7 +314,8 @@ mod users_service {
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct UsersServiceAsyncClient<_Client>(_Client);
-    impl<_Client: AsyncClient<Request, Response>> UsersServiceAsyncClient<_Client> {
+    #[allow(clippy::future_not_send)]
+         impl<_Client: AsyncClient<Request, Response>> UsersServiceAsyncClient<_Client> {
         pub async fn new(&self, user: NewUser) -> Result<User, _Client::Error> {
             match self.0.send(Request::New(user)).await? {
                 Response::New(value) => Ok(value),
@@ -586,7 +588,8 @@ mod user_service {
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct UserServiceAsyncClient<_Client>(_Client);
-    impl<_Client: AsyncClient<Request, Response>> UserServiceAsyncClient<_Client> {
+    #[allow(clippy::future_not_send)]
+         impl<_Client: AsyncClient<Request, Response>> UserServiceAsyncClient<_Client> {
         pub async fn get(&self) -> Result<Result<User, UserNotFound>, _Client::Error> {
             match self.0.send(Request::Get()).await? {
                 Response::Get(value) => Ok(value),

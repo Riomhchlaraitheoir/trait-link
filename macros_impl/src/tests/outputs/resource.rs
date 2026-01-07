@@ -97,7 +97,8 @@ mod resources {
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
     pub struct ResourcesAsyncClient<_Client, T>(_Client, (PhantomData<fn() -> (T,)>));
-    impl<_Client: AsyncClient<Request<T>, Response<T>>, T> ResourcesAsyncClient<_Client, T> {
+    #[allow(clippy::future_not_send)]
+         impl<_Client: AsyncClient<Request<T>, Response<T>>, T> ResourcesAsyncClient<_Client, T> {
         pub async fn list(&self) -> Result<Vec<T>, _Client::Error> {
             match self.0.send(Request::List()).await? {
                 Response::List(value) => Ok(value),

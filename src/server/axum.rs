@@ -130,7 +130,7 @@ where
     H: Handler + Send + Sync + 'static,
 {
     fn call_internal(
-        &mut self,
+        &self,
         req: Request,
     ) -> impl Future<Output = Result<Success, Error>> + Send + 'static {
         let methods = self.methods.clone();
@@ -191,32 +191,32 @@ pub enum Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            Error::WrongMethod => (
+            Self::WrongMethod => (
                 StatusCode::NOT_FOUND,
                 "No resource found with the provided method".to_string(),
             )
                 .into_response(),
-            Error::NoContentType => (
+            Self::NoContentType => (
                 StatusCode::BAD_REQUEST,
                 "No Content-Type Header provided".to_string(),
             )
                 .into_response(),
-            Error::UnsupportedContentType => (
+            Self::UnsupportedContentType => (
                 StatusCode::BAD_REQUEST,
                 "provided Content-Type not supported".to_string(),
             )
                 .into_response(),
-            Error::Deserialise(error) => (
+            Self::Deserialise(error) => (
                 StatusCode::BAD_REQUEST,
                 format!("Could not parse request: {error}"),
             )
                 .into_response(),
-            Error::Serialise(error) => (
+            Self::Serialise(error) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Could not serialise response: {error}"),
             )
                 .into_response(),
-            Error::Internal(error) => (StatusCode::INTERNAL_SERVER_ERROR, error).into_response(),
+            Self::Internal(error) => (StatusCode::INTERNAL_SERVER_ERROR, error).into_response(),
         }
     }
 }

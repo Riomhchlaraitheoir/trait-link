@@ -1,3 +1,5 @@
+#![doc = include_str!("./examples.md")]
+
 use trait_rpc::client::reqwest::Reqwest;
 use trait_rpc::format::Json;
 use trait_rpc::Rpc;
@@ -71,5 +73,5 @@ async fn main() {
         .await
         .expect("Error getting user")
         .expect_err("User not deleted");
-    println!("Confirmed user deleted")
+    println!("Confirmed user deleted");
 }
