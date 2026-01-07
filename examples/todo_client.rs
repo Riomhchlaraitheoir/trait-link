@@ -1,6 +1,6 @@
-use trait_link::client::reqwest::Reqwest;
-use trait_link::*;
-use trait_link::format::Json;
+use trait_rpc::client::reqwest::Reqwest;
+use trait_rpc::*;
+use trait_rpc::format::Json;
 
 include!("traits/todo.rs");
 

@@ -1,7 +1,7 @@
 use axum::http::Method;
-use trait_link::client::reqwest_blocking::ReqwestBlocking;
-use trait_link::*;
-use trait_link::format::Json;
+use trait_rpc::client::reqwest_blocking::ReqwestBlocking;
+use trait_rpc::*;
+use trait_rpc::format::Json;
 
 include!("traits/todo.rs");
 

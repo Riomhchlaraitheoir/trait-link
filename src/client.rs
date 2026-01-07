@@ -20,6 +20,7 @@ pub mod reqwest_blocking;
 #[cfg(all(feature = "reqwest-blocking", target_arch = "wasm32"))]
 compile_error!("reqwest-blocking feature is not available for wasm32 target arch");
 
+#[must_use]
 /// Return a client builder
 pub fn builder() -> Builder {
     Builder
@@ -29,6 +30,7 @@ pub fn builder() -> Builder {
 pub struct Builder;
 
 #[bon]
+#[allow(clippy::unused_self)]
 impl Builder {
     /// Build an asynchronous client
     #[builder(finish_fn = build)]
@@ -84,6 +86,12 @@ pub trait BlockingClient<Req, Resp>: Clone {
     /// The error that can happen during send
     type Error: Error + MaybeWrongResponse + From<WrongResponseType> + 'static;
     /// Send a request and receive a response
+    ///
+    /// # Errors
+    /// Returns an error for any of the following cases:
+    /// * Failed at the transport layer
+    /// * Failed to serialise/deserialise
+    /// * Received the wrong type of response
     fn send(&self, request: Req) -> Result<Resp, Self::Error>;
 }
 
@@ -101,6 +109,13 @@ where
     Self: Clone
 {
     type Error = LinkError<F::WriteError, F::ReadError, T::Error>;
+    /// Send a request and receive a response
+    ///
+    /// # Errors
+    /// Returns an error for any of the following cases:
+    /// * Failed at the transport layer
+    /// * Failed to serialise/deserialise
+    /// * Received the wrong type of response
     async fn send(&self, request: Req) -> Result<Resp, Self::Error> {
         let mut buffer = Vec::new();
         self.format.write(request, &mut buffer).map_err(LinkError::Serialize)?;

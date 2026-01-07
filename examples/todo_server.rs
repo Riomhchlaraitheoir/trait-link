@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use tokio::sync::RwLock;
-use trait_link::server::axum::Axum;
+use trait_rpc::server::axum::Axum;
 
 include!("traits/todo.rs");
 

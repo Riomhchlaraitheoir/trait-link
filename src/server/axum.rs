@@ -156,7 +156,7 @@ where
                 .await
                 .map_err(|error| Error::Internal(error.to_string()))?;
             let request = format
-                .read(&mut bytes.deref())
+                .read(&mut &*bytes)
                 .map_err(Error::Deserialise)?;
             let response = server.deref().handle(request).await;
             let mut buffer = Vec::new();

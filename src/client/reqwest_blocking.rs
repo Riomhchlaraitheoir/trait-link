@@ -5,7 +5,7 @@ use reqwest::blocking::Client;
 use reqwest::{Method};
 use crate::format::{FormatInfo};
 
-/// A AsyncClient which uses the [reqwest] crate
+/// A [`AsyncTransport`] which uses the [reqwest] crate
 #[derive(Debug, Clone)]
 pub struct ReqwestBlocking {
     client: Client,

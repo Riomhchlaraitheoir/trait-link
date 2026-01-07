@@ -1,4 +1,4 @@
-use trait_link::rpc;
+use trait_rpc::rpc;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct LoginToken(String);

@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2024"
 
 [package]
-name = "trait-link"
+name = "trait-rpc"
 version.workspace = true
 edition.workspace = true
 
@@ -27,7 +27,7 @@ reqwest = { version = "0.12.24", features = ["json"], optional = true }
 thiserror = "2.0.17"
 axum = { version = "0.8.7", optional = true, features = ["macros"]}
 tower = { version = "0.5.2", optional = true }
-macros = { path = "macros" }
+macros = { package = "trait-rpc-macros", path = "macros" }
 futures = "0.3.31"
 bon = "3.8.1"
 

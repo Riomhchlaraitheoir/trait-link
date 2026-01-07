@@ -1,13 +1,13 @@
-use trait_link::client::reqwest::Reqwest;
-use trait_link::format::Json;
-use trait_link::Rpc;
+use trait_rpc::client::reqwest::Reqwest;
+use trait_rpc::format::Json;
+use trait_rpc::Rpc;
 
 include!("traits/nested.rs");
 
 #[tokio::main]
 async fn main() {
     let client = ApiService::async_client(
-        trait_link::client::builder()
+        trait_rpc::client::builder()
             .non_blocking()
             .transport(
                 Reqwest::builder()

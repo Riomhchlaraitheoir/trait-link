@@ -160,7 +160,7 @@ impl ToTokens for Rpc {
             #[allow(unused_imports, reason = "These might not always be used, but it's easier to include always")]
             mod #module {
                 use super::*;
-                use ::trait_link::{
+                use ::trait_rpc::{
                     Rpc,
                     client::{AsyncClient, BlockingClient, MappedClient, WrongResponseType},
                     serde::{Deserialize, Serialize},
@@ -172,7 +172,7 @@ impl ToTokens for Rpc {
                     #(#[doc = #docs])*
                     ///
                 )*
-                /// This is the [Rpc](::trait_link::Rpc) definition for this service
+                /// This is the [Rpc](::trait_rpc::Rpc) definition for this service
                 pub struct #service #generics #phantom_data;
 
                 impl #generics Rpc for #service #generics #(where #(#maybe_generics: Send + 'static),*)* {
@@ -189,7 +189,7 @@ impl ToTokens for Rpc {
                 }
 
                 impl<#(#gen_params: Send + 'static),*> #service #generics {
-                    /// Create a new [Handler](trait_link::Handler) for the service
+                    /// Create a new [Handler](trait_rpc::Handler) for the service
                     pub fn server(server: impl #server #generics) -> impl Handler<Rpc = Self> {
                         #handler(server, #phantom_data_new)
                     }
@@ -197,14 +197,14 @@ impl ToTokens for Rpc {
 
 
                 #[derive(Debug, Serialize, Deserialize)]
-                #[serde(crate = "::trait_link::serde")]
+                #[serde(crate = "::trait_rpc::serde")]
                 #[serde(tag = "method", content = "args")]
                 pub enum Request #generics {
                     #(#request_variants,)*
                 }
 
                 #[derive(Debug, Serialize, Deserialize)]
-                #[serde(crate = "::trait_link::serde")]
+                #[serde(crate = "::trait_rpc::serde")]
                 #[serde(tag = "method", content = "result")]
                 pub enum Response #generics {
                     #(#response_variants,)*
@@ -245,7 +245,7 @@ impl ToTokens for Rpc {
                 )*
                 /// This is the async client for the service, it produces requests from method calls
                 /// (including chained method calls) and sends the requests with the given
-                /// [transport](::trait_link::AsyncClient) before returning the response
+                /// [transport](::trait_rpc::AsyncClient) before returning the response
                 ///
                 /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
                 #[derive(Debug, Copy, Clone)]
@@ -260,7 +260,7 @@ impl ToTokens for Rpc {
                 )*
                 /// This is the blocking client for the service, it produces requests from method calls
                 /// (including chained method calls) and sends the requests with the given
-                /// [transport](::trait_link::AsyncClient) before returning the response
+                /// [transport](::trait_rpc::AsyncClient) before returning the response
                 ///
                 /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
                 #[derive(Debug, Copy, Clone)]

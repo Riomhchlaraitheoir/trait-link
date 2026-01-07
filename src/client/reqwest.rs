@@ -5,7 +5,7 @@ use crate::AsyncTransport;
 pub use reqwest::Error;
 use crate::format::{FormatInfo};
 
-/// An [AsyncTransport] which uses the [reqwest] crate
+/// An [`AsyncTransport`] which uses the [reqwest] crate
 #[derive(Debug, Clone)]
 pub struct Reqwest {
     client: reqwest::Client,

@@ -2,7 +2,7 @@ use macros::rpc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(crate = "::trait_link::serde")]
+#[serde(crate = "::trait_rpc::serde")]
 #[allow(unused)]
 struct Todo {
     name: String,

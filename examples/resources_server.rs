@@ -1,7 +1,7 @@
 use axum::Router;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
-use trait_link::server::axum::Axum;
+use trait_rpc::server::axum::Axum;
 
 include!("traits/resources.rs");
 

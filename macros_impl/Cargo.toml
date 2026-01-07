@@ -1,5 +1,5 @@
 [package]
-name = "macros_impl"
+name = "trait-rpc-macros-impl"
 version.workspace = true
 edition.workspace = true
 

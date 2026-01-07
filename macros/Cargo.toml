@@ -1,5 +1,5 @@
 [package]
-name = "macros"
+name = "trait-rpc-macros"
 version.workspace = true
 edition.workspace = true
 
@@ -7,6 +7,6 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
-macros_impl = { path = "../macros_impl" }
+macros-impl = { package = "trait-rpc-macros-impl", path = "../macros_impl" }
 syn = "2.0.111"
 quote = "1.0.42"

@@ -6,14 +6,14 @@ pub use api_service::{
 #[allow(unused_imports, reason = "These might not always be used, but it's easier to include always")]
 mod api_service {
     use super::*;
-    use ::trait_link::{
+    use ::trait_rpc::{
         Rpc,
         client::{AsyncClient, BlockingClient, MappedClient, WrongResponseType},
         serde::{Deserialize, Serialize},
         server::Handler,
     };
     use std::marker::PhantomData;
-    /// This is the [Rpc](::trait_link::Rpc) definition for this service
+    /// This is the [Rpc](::trait_rpc::Rpc) definition for this service
     pub struct ApiService;
     impl Rpc for ApiService {
         type AsyncClient<_Client: AsyncClient<Self::Request, Self::Response>> =
@@ -34,13 +34,13 @@ mod api_service {
         }
     }
     impl ApiService {
-        /// Create a new [Handler](trait_link::Handler) for the service
+        /// Create a new [Handler](trait_rpc::Handler) for the service
         pub fn server(server: impl ApiServiceServer) -> impl Handler<Rpc = Self> {
             ApiServiceHandler(server)
         }
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "args")]
     pub enum Request {
         #[serde(rename = "users")]
@@ -49,7 +49,7 @@ mod api_service {
         Login(String, String),
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "result")]
     pub enum Response {
         #[serde(rename = "users")]
@@ -97,7 +97,7 @@ mod api_service {
 
     /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
@@ -147,7 +147,7 @@ mod api_service {
     }
     /// This is the blocking client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
@@ -203,14 +203,14 @@ pub use users_service::{
 #[allow(unused_imports, reason = "These might not always be used, but it's easier to include always")]
 mod users_service {
     use super::*;
-    use ::trait_link::{
+    use ::trait_rpc::{
         Rpc,
         client::{AsyncClient, BlockingClient, MappedClient, WrongResponseType},
         serde::{Deserialize, Serialize},
         server::Handler,
     };
     use std::marker::PhantomData;
-    /// This is the [Rpc](::trait_link::Rpc) definition for this service
+    /// This is the [Rpc](::trait_rpc::Rpc) definition for this service
     pub struct UsersService;
     impl Rpc for UsersService {
         type AsyncClient<_Client: AsyncClient<Self::Request, Self::Response>> =
@@ -231,13 +231,13 @@ mod users_service {
         }
     }
     impl UsersService {
-        /// Create a new [Handler](trait_link::Handler) for the service
+        /// Create a new [Handler](trait_rpc::Handler) for the service
         pub fn server(server: impl UsersServiceServer) -> impl Handler<Rpc = Self> {
             UsersServiceHandler(server)
         }
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "args")]
     pub enum Request {
         #[serde(rename = "new")]
@@ -250,7 +250,7 @@ mod users_service {
         Current(LoginToken, <UserService as Rpc>::Request),
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "result")]
     pub enum Response {
         #[serde(rename = "new")]
@@ -308,7 +308,7 @@ mod users_service {
 
     /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
@@ -396,7 +396,7 @@ mod users_service {
     }
     /// This is the blocking client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
@@ -490,14 +490,14 @@ pub use user_service::{
 #[allow(unused_imports, reason = "These might not always be used, but it's easier to include always")]
 mod user_service {
     use super::*;
-    use ::trait_link::{
+    use ::trait_rpc::{
         Rpc,
         client::{AsyncClient, BlockingClient, MappedClient, WrongResponseType},
         serde::{Deserialize, Serialize},
         server::Handler,
     };
     use std::marker::PhantomData;
-    /// This is the [Rpc](::trait_link::Rpc) definition for this service
+    /// This is the [Rpc](::trait_rpc::Rpc) definition for this service
     pub struct UserService;
     impl Rpc for UserService {
         type AsyncClient<_Client: AsyncClient<Self::Request, Self::Response>> =
@@ -518,13 +518,13 @@ mod user_service {
         }
     }
     impl UserService {
-        /// Create a new [Handler](trait_link::Handler) for the service
+        /// Create a new [Handler](trait_rpc::Handler) for the service
         pub fn server(server: impl UserServiceServer) -> impl Handler<Rpc = Self> {
             UserServiceHandler(server)
         }
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "args")]
     pub enum Request {
         #[serde(rename = "get")]
@@ -535,7 +535,7 @@ mod user_service {
         Delete(),
     }
     #[derive(Debug, Serialize, Deserialize)]
-    #[serde(crate = "::trait_link::serde")]
+    #[serde(crate = "::trait_rpc::serde")]
     #[serde(tag = "method", content = "result")]
     pub enum Response {
         #[serde(rename = "get")]
@@ -581,7 +581,7 @@ mod user_service {
 
     /// This is the async client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
@@ -611,7 +611,7 @@ mod user_service {
     }
     /// This is the blocking client for the service, it produces requests from method calls
     /// (including chained method calls) and sends the requests with the given
-    /// [transport](::trait_link::AsyncClient) before returning the response
+    /// [transport](::trait_rpc::AsyncClient) before returning the response
     ///
     /// The return value is always wrapped in a result: `Result<T, _Client::Error>` where `T` is the service return value
     #[derive(Debug, Copy, Clone)]
