@@ -109,7 +109,7 @@ where
     T: AsyncTransport,
     Self: Clone
 {
-    type Error = LinkError<F::WriteError, F::ReadError, T::Error>;
+    type Error = RpcError<F::WriteError, F::ReadError, T::Error>;
     /// Send a request and receive a response
     ///
     /// # Errors
@@ -119,9 +119,9 @@ where
     /// * Received the wrong type of response
     async fn send(&self, request: Req) -> Result<Resp, Self::Error> {
         let mut buffer = Vec::new();
-        self.format.write(request, &mut buffer).map_err(LinkError::Serialize)?;
-        let response = self.transport.send(buffer, F::INFO).await.map_err(LinkError::Transport)?;
-        let response = self.format.read(response.as_slice()).map_err(LinkError::Deserialize)?;
+        self.format.write(request, &mut buffer).map_err(RpcError::Serialize)?;
+        let response = self.transport.send(buffer, F::INFO).await.map_err(RpcError::Transport)?;
+        let response = self.format.read(response.as_slice()).map_err(RpcError::Deserialize)?;
         Ok(response)
     }
 }
@@ -132,12 +132,12 @@ where
     T: BlockingTransport,
     Self: Clone
 {
-    type Error = LinkError<F::WriteError, F::ReadError, T::Error>;
+    type Error = RpcError<F::WriteError, F::ReadError, T::Error>;
     fn send(&self, request: Req) -> Result<Resp, Self::Error> {
         let mut buffer = Vec::new();
-        self.format.write(request, &mut buffer).map_err(LinkError::Serialize)?;
-        let response = self.transport.send(buffer, F::INFO).map_err(LinkError::Transport)?;
-        let response = self.format.read(response.as_slice()).map_err(LinkError::Deserialize)?;
+        self.format.write(request, &mut buffer).map_err(RpcError::Serialize)?;
+        let response = self.transport.send(buffer, F::INFO).map_err(RpcError::Transport)?;
+        let response = self.format.read(response.as_slice()).map_err(RpcError::Deserialize)?;
         Ok(response)
     }
 }
@@ -264,7 +264,7 @@ where
 
 /// This is a error that the client may return after a request
 #[derive(Debug, Error, Clone)]
-pub enum LinkError<Ser, De, T> {
+pub enum RpcError<Ser, De, T> {
     /// The transport layer returned an error
     #[error("Failed to send request: {0}")]
     Transport(#[source] T),
@@ -324,7 +324,7 @@ pub trait MaybeWrongResponse: Sized {
     fn into_wrong_response(self) -> Result<WrongResponseType, Self>;
 }
 
-impl<Ser: Debug + Display, De: Debug + Display, T: Error> MaybeWrongResponse for LinkError<Ser, De, T> {
+impl<Ser: Debug + Display, De: Debug + Display, T: Error> MaybeWrongResponse for RpcError<Ser, De, T> {
     fn into_wrong_response(self) -> Result<WrongResponseType, Self> {
         if let Self::WrongResponseType(err) = self {
             Ok(err)

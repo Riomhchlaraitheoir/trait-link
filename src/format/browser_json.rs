@@ -1,3 +1,5 @@
+//! Provides support for the CBOR ([JavaScript Object Notation](https://www.json.org/)) format, driven by the WASM API
+
 use std::io;
 use std::string::FromUtf8Error;
 use serde::de::DeserializeOwned;
@@ -33,19 +35,27 @@ where Read: DeserializeOwned, Write: Serialize
     fn write(&self, value: Write, mut writer: impl io::Write) -> Result<(), Self::WriteError> {
         let value = serde_wasm_bindgen::to_value(&value)?;
         let json = js_sys::JSON::stringify(&value).map_err(Error::Parse)?;
-        writer.write_all(json.as_string().expect("failed to decode json string").as_bytes())?;
+        writer.write_all(json.as_string().ok_or(Error::JsString)?.as_bytes())?;
         Ok(())
     }
 }
 
+/// An error which can occur while serialising/deserialising JSON
 #[derive(Debug, Error)]
 pub enum Error {
+    /// Failed to parse JSON string
     #[error("failed to parse json: {0:?}")]
     Parse(JsValue),
+    /// Failed to translate between rust and JS objects
     #[error("failed to serialize json: {0}")]
     Serde(#[from] serde_wasm_bindgen::Error),
+    /// Failed io on read/write
     #[error(transparent)]
     IO(#[from] io::Error),
+    /// Failed to read a bytes as string
     #[error("failed to decode string: {0}")]
-    Decode(#[from] FromUtf8Error)
+    Decode(#[from] FromUtf8Error),
+    /// Failed to read JS string as a rust string
+    #[error("failed to translate string")]
+    JsString
 }

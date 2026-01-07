@@ -1,3 +1,5 @@
+//! Provides support for the CBOR ([Concise Binary Object Representation](https://cbor.io/)) format
+
 use crate::format::{Format, FormatInfo};
 use std::io;
 use serde::de::DeserializeOwned;

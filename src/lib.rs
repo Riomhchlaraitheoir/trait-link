@@ -8,7 +8,7 @@ pub mod client;
 pub mod format;
 
 pub use macros::rpc;
-pub use crate::client::{AsyncTransport, BlockingTransport, MappedClient, LinkError};
+pub use crate::client::{AsyncTransport, BlockingTransport, MappedClient, RpcError};
 pub use server::Handler;
 use crate::client::{AsyncClient, BlockingClient};
 

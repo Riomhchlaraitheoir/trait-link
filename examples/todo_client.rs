@@ -2,7 +2,7 @@
 
 use trait_rpc::client::reqwest::Reqwest;
 use trait_rpc::{Rpc, client};
-use trait_rpc::format::Json;
+use trait_rpc::format::json::Json;
 
 include!("traits/todo.rs");
 

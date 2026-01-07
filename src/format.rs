@@ -5,19 +5,13 @@ use std::error::Error;
 use std::io;
 
 #[cfg(feature = "json")]
-mod json;
-#[cfg(feature = "json")]
-pub use json::Json;
+pub mod json;
 #[cfg(all(feature = "browser-json", target_arch = "wasm32"))]
-mod browser_json;
-#[cfg(all(feature = "browser-json", target_arch = "wasm32"))]
-pub use browser_json::BrowserJson;
+pub mod browser_json;
 #[cfg(all(feature = "browser-json", not(target_arch = "wasm32")))]
 compile_error!("browser-json is only available on wasm32 arch");
 #[cfg(feature = "cbor")]
-mod cbor;
-#[cfg(feature = "cbor")]
-pub use cbor::Cbor;
+pub mod cbor;
 
 /// A format which is able to deserialise `Read` and serialise `Write`
 pub trait Format<Read, Write>: Send + Sync {

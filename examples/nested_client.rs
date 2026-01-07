@@ -1,7 +1,7 @@
 #![doc = include_str!("./examples.md")]
 
 use trait_rpc::client::reqwest::Reqwest;
-use trait_rpc::format::Json;
+use trait_rpc::format::json::Json;
 use trait_rpc::Rpc;
 
 include!("traits/nested.rs");

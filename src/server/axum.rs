@@ -73,18 +73,18 @@ where
     #[cfg(feature = "json")]
     pub fn allow_json(self) -> Self
     where
-        format::Json: for<'a> Format<RpcRequest<H>, RpcResponse<H>>,
+        format::json::Json: for<'a> Format<RpcRequest<H>, RpcResponse<H>>,
     {
-        self.format(&format::Json)
+        self.format(&format::json::Json)
     }
 
     /// Add CBOR support to this server
     #[cfg(feature = "cbor")]
     pub fn allow_cbor(self) -> Self
     where
-        format::Cbor: for<'a> Format<RpcRequest<H>, RpcResponse<H>>,
+        format::cbor::Cbor: for<'a> Format<RpcRequest<H>, RpcResponse<H>>,
     {
-        self.format(&format::Cbor)
+        self.format(&format::cbor::Cbor)
     }
 
     /// Allow POST requests

@@ -6,7 +6,7 @@ use std::collections::hash_map::Entry;
 use std::ops::Deref;
 use tokio::sync::RwLock;
 use trait_rpc::Handler;
-use trait_rpc::format::{Cbor, Json};
+use trait_rpc::format::{cbor::Cbor, json::Json};
 use trait_rpc::server::axum::Axum;
 
 include!("traits/nested.rs");

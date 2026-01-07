@@ -1,3 +1,5 @@
+//! Provides support for the CBOR ([JavaScript Object Notation](https://www.json.org/)) format
+
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use crate::format::{Format, FormatInfo};
