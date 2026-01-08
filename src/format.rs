@@ -39,11 +39,11 @@ pub trait DynFormat<Readable, Writeable>: Send + Sync {
 }
 
 impl<F, Read, Write> DynFormat<Read, Write> for F where F: Format<Read, Write> {
-    fn read(&self, reader: &mut dyn io::Read) -> Result<Read, String> {
+    fn read(&self, reader: &dyn io::Read) -> Result<Read, String> {
         Format::<Read, Write>::read(self, reader).map_err(|err| err.to_string())
     }
 
-    fn write(&self, value: Write, writer: &mut dyn io::Write) -> Result<(), String> {
+    fn write(&self, value: Write, writer: &dyn io::Write) -> Result<(), String> {
         Format::<Read, Write>::write(self, value, writer).map_err(|err| err.to_string())
     }
 
