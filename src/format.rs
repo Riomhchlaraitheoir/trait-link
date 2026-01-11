@@ -18,9 +18,9 @@ pub trait Format<Read, Write>: Send + Sync {
     fn content_type(&self) -> &'static str;
 
     /// Read a value from the given [Read]
-    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error>>;
+    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error + Send>>;
     /// write the given value to the given [Write]
-    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error>>;
+    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error + Send>>;
 }
 
 impl<Read, Write> dyn Format<Read, Write> {}

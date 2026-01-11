@@ -6,7 +6,6 @@ use std::string::FromUtf8Error;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use thiserror::Error;
-use wasm_bindgen_futures::wasm_bindgen::JsValue;
 use web_sys::js_sys;
 use crate::format::{Format};
 
@@ -23,28 +22,38 @@ where Read: DeserializeOwned, Write: Serialize
         CONTENT_TYPE
     }
 
-    fn read(&self, json: &[u8]) -> Result<Read, Box<dyn StdError>> {
-        let json = String::from_utf8(Vec::from(json))?;
-        let value = js_sys::JSON::parse(&json).map_err(Error::Parse)?;
-        Ok(serde_wasm_bindgen::from_value(value)?)
+    fn read(&self, json: &[u8]) -> Result<Read, Box<dyn StdError + Send>> {
+        Self::read_impl(json).map_err(|e| Box::new(e) as Box<dyn StdError + Send>)
     }
 
-    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn StdError>> {
-        let value = serde_wasm_bindgen::to_value(&value)?;
-        let json = js_sys::JSON::stringify(&value).map_err(Error::Parse)?;
+    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn StdError + Send>> {
+        Self::write_impl(value).map_err(|e| Box::new(e) as Box<dyn StdError + Send>)
+    }
+}
+
+impl BrowserJson {
+    fn read_impl<T: DeserializeOwned>(json: &[u8]) -> Result<T, Error> {
+        let json = String::from_utf8(Vec::from(json)).map_err(Error::Decode)?;
+        let value = js_sys::JSON::parse(&json).map_err(|error| Error::Parse(format!("{error:?}")))?;
+        serde_wasm_bindgen::from_value(value).map_err(|error| Error::Serde(error.to_string()))
+    }
+
+    fn write_impl(value: impl Serialize) -> Result<Vec<u8>, Error> {
+        let value = serde_wasm_bindgen::to_value(&value).map_err(|error| Error::Serde(error.to_string()))?;
+        let json = js_sys::JSON::stringify(&value).map_err(|error| Error::Parse(format!("{error:?}")))?;
         Ok(json.as_string().ok_or(Error::JsString)?.as_bytes().to_vec())
     }
 }
 
 /// An error which can occur while serialising/deserialising JSON
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum Error where Self: Send {
     /// Failed to parse JSON string
     #[error("failed to parse json: {0:?}")]
-    Parse(JsValue),
+    Parse(String),
     /// Failed to translate between rust and JS objects
     #[error("failed to serialize json: {0}")]
-    Serde(#[from] serde_wasm_bindgen::Error),
+    Serde(String),
     /// Failed io on read/write
     #[error(transparent)]
     IO(#[from] io::Error),

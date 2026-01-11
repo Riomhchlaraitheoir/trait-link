@@ -18,6 +18,13 @@ pub mod reqwest;
 /// Implementation for making requests using the reqwest crate
 #[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
 pub mod reqwest_blocking;
+#[cfg(feature = "websocket-client")]
+pub mod websocket;
+#[cfg(all(feature = "wasm-websocket", not(target_arch = "wasm32")))]
+compile_error!("wasm-websocket feature is only available for wasm32 target arch");
+#[cfg(all(feature = "wasm-websocket", target_arch = "wasm32"))]
+pub mod wasm_websocket;
+
 #[cfg(all(feature = "reqwest-blocking", target_arch = "wasm32"))]
 compile_error!("reqwest-blocking feature is not available for wasm32 target arch");
 
@@ -271,10 +278,10 @@ pub enum RpcError<T> {
     Response(#[from] ResponseError),
     /// Failed to serialize the request
     #[error("Failed to serialize the request: {0}")]
-    Serialize(Box<dyn Error>),
+    Serialize(Box<dyn Error + Send>),
     /// Failed to deserialize the response
     #[error("Failed to deserialize the response: {0}")]
-    Deserialize(Box<dyn Error>),
+    Deserialize(Box<dyn Error + Send>),
     /// Response was the wrong type, sent a request for one function, but received the response of a different one
     ///
     /// This is not an expected case and is simply included as an alternative to panicking in this case

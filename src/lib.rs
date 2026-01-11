@@ -35,3 +35,26 @@ pub trait Rpc: Sized {
     where
         C: BlockingClient<Self::Request, Self::Response>;
 }
+
+#[allow(dead_code, reason = "only using in certain features, but better to leave it open")]
+/// Build a request/response from a request ID and a payload. Useful for implementing transport
+/// protocols that share a single connection for many concurrent requests
+fn prepend_id(request_id:u32, payload: Vec<u8>) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(payload.len() + 4);
+    bytes.extend(request_id.to_le_bytes());
+    bytes.extend(payload);
+    bytes
+}
+
+#[allow(dead_code, reason = "only using in certain features, but better to leave it open")]
+/// Get request id and payload from the given request/response. Useful for implementing transport
+/// protocols that share a single connection for many concurrent requests
+fn get_request_id(request: &[u8]) -> (u32, &[u8]) {
+    let request_id = u32::from_le_bytes([
+        request[0],
+        request[1],
+        request[2],
+        request[3],
+    ]);
+    (request_id, &request[4..])
+}

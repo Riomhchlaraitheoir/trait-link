@@ -22,13 +22,15 @@ pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 
 [features]
-axum = ["dep:axum", "tower"]
-browser = ["web-sys", "wasm-bindgen-futures"]
+axum = ["dep:axum", "dep:tower", "axum/ws"]
+browser = ["dep:web-sys", "dep:wasm-bindgen-futures"]
+wasm-websocket = ["dep:web-sys", "dep:wasm-bindgen-futures", "dep:ws_stream_wasm"]
 reqwest-blocking = ["dep:reqwest", "reqwest/blocking"]
 reqwest = ["dep:reqwest"]
-json = ["serde_json"]
-browser-json = ["serde-wasm-bindgen", "web-sys", "wasm-bindgen-futures"]
-cbor = ["ciborium"]
+websocket-client = ["dep:tokio-tungstenite", "dep:tokio"]
+json = ["dep:serde_json"]
+browser-json = ["dep:serde-wasm-bindgen", "dep:web-sys", "dep:wasm-bindgen-futures"]
+cbor = ["dep:ciborium"]
 __examples_tokio = ["dep:tokio"]
 
 [dependencies]
@@ -40,6 +42,9 @@ tower = { version = "0.5.2", optional = true }
 macros = { package = "trait-rpc-macros", path = "macros" }
 futures = "0.3.31"
 bon = "3.8.1"
+tracing = "0.1.44"
+tokio-tungstenite = { version = "0.28.0", optional = true }
+ws_stream_wasm = { version = "0.7.5", optional = true }
 
 # Formats
 serde_json = { version = "1.0.145", optional = true }

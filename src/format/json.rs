@@ -18,11 +18,11 @@ where Read: DeserializeOwned, Write: Serialize
         CONTENT_TYPE
     }
 
-    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error>> {
-        serde_json::from_slice(reader).map_err(|error| Box::new(error) as Box<dyn Error>)
+    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error + Send>> {
+        serde_json::from_slice(reader).map_err(|error| Box::new(error) as Box<dyn Error + Send>)
     }
 
-    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error>> {
-        serde_json::to_vec(&value).map_err(|error| Box::new(error) as Box<dyn Error>)
+    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error + Send>> {
+        serde_json::to_vec(&value).map_err(|error| Box::new(error) as Box<dyn Error + Send>)
     }
 }

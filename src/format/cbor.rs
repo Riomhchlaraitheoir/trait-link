@@ -18,13 +18,13 @@ where Read: DeserializeOwned, Write: Serialize
         CONTENT_TYPE
     }
 
-    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error>> {
-        ciborium::from_reader(reader).map_err(|error| Box::new(error) as Box<dyn Error>)
+    fn read(&self, reader: &[u8]) -> Result<Read, Box<dyn Error + Send>> {
+        ciborium::from_reader(reader).map_err(|error| Box::new(error) as Box<dyn Error + Send>)
     }
 
-    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn write(&self, value: Write) -> Result<Vec<u8>, Box<dyn Error + Send>> {
         let mut buffer = Vec::new();
-        ciborium::into_writer(&value, &mut buffer).map_err(|error| Box::new(error) as Box<dyn Error>)?;
+        ciborium::into_writer(&value, &mut buffer).map_err(|error| Box::new(error) as Box<dyn Error + Send>)?;
         Ok(buffer)
     }
 }
